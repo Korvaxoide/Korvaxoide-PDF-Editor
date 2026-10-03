@@ -125,21 +125,22 @@ def utente(finestra) -> Utente:
     return Utente(finestra)
 
 
-_TMP = None
-
-
 def _documento_modello() -> str:
-    """PDF con testo, campi modulo e un'immagine."""
-    global _TMP
-    if _TMP is not None:
-        return _TMP
+    """PDF con testo, campi modulo e un'immagine.
+
+    Ogni chiamata riceve un file proprio. Su Windows un PDF che una
+    finestra precedente tiene aperto non può essere riscritto: un modello
+    condiviso farebbe fallire una dopo l'altra tutte le prove che lo usano,
+    e il primo errore racconterebbe la catena invece della causa.
+    """
     import io
+    import uuid
 
     from PIL import Image
 
     from pdfeditor.core.document import Document
 
-    percorso = str(ambiente.cartella("modelli") / "interazione.pdf")
+    percorso = str(ambiente.cartella("modelli") / f"interazione-{uuid.uuid4().hex}.pdf")
     d = Document()
     d.new(595, 842)
     d.insert_text_box(0, pymupdf.Rect(50, 60, 520, 95), "Relazione annuale", fontsize=18)
@@ -155,7 +156,6 @@ def _documento_modello() -> str:
     d.add_bookmark("Introduzione", 0)
     d.save(percorso)
     d.close()
-    _TMP = percorso
     return percorso
 
 

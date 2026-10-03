@@ -39,6 +39,14 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
   raggiungeva. Un download fallito non dice niente del repository: ora viene
   ritentato e, se il testo non arriva, avvisa e lascia passare. A fermare la
   build è adesso solo un `LICENSE` cambiato.
+- Cinquanta verifiche di interazione fallivano su Windows prima ancora di un
+  clic: il PDF usato come modello veniva riscritto, nome compreso, mentre una
+  finestra lo teneva aperto, e Windows non permette di riscriverlo. Ogni
+  verifica costruisce adesso il proprio modello.
+- La verifica del ritento quando un file è occupato per un momento saltava su
+  Windows, dove la sostituzione non viene mai tentata: ora la prova apposta, e
+  una seconda verifica copre il ritento della scrittura che Windows usa alla
+  fine.
 
 ---
 

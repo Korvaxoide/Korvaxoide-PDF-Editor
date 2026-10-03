@@ -39,6 +39,13 @@ the *About* window all read it from there.
   download that fails says nothing about the repository: it is now retried
   and, if the text still does not arrive, it warns and lets the build
   through. Only a changed `LICENSE` stops a build now.
+- Fifty interaction tests failed on Windows before any click: the PDF used as
+  a model was written over, file name included, while a window still had it
+  open, and Windows refuses to rewrite it. Each test now builds its own
+  model.
+- The test for the retry when a file is briefly busy was skipped on Windows,
+  where the substitution is never attempted: it now tries it on purpose, and
+  a second test covers the retry of the write that Windows ends up using.
 
 ---
 

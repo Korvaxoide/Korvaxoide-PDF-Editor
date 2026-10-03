@@ -912,8 +912,43 @@ def test_salvataggio_riprova_se_il_file_e_temporaneamente_aperto(
         return vero(a, b)
 
     monkeypatch.setattr(os, "replace", respinge_una_volta)
+    # su Windows la sostituzione non è tentata: qui si prova comunque, perché è
+    # il tentativo che va ripetuto
+    monkeypatch.setattr(document, "_SOSTITUZIONE_DISPONIBILE", True)
     assert doc.save() == p
     assert len(tentativi) == 2, "il salvataggio non ha riprovato"
+    assert list(tmp_path.glob("*.tmp")) == [], "resta un provvisorio sul disco"
+    doc.close()
+
+
+def test_salvataggio_riprova_anche_scrivendo_dentro(tmp_path: Path, monkeypatch):
+    """La via senza sostituzione deve riprovare prima di arrendersi.
+
+    È quella che Windows usa sempre, perché lì sostituire un file aperto è
+    vietato: senza ripetizione un antivirus che lo tiene aperto mezzo secondo
+    farebbe perdere il lavoro.
+    """
+    p = tmp_path / "scrittura.pdf"
+    d = pymupdf.open()
+    d.new_page(width=400, height=600)
+    d.save(str(p))
+    d.close()
+
+    doc = Document()
+    doc.open(str(p))
+    monkeypatch.setattr(document, "_SOSTITUZIONE_DISPONIBILE", False)
+    vero = document._scrivi_su_file_aperto
+    tentativi = []
+
+    def respinge_una_volta(provvisorio, target):
+        tentativi.append((provvisorio, target))
+        if len(tentativi) == 1:
+            raise PermissionError(13, "file aperto")
+        vero(provvisorio, target)
+
+    monkeypatch.setattr(document, "_scrivi_su_file_aperto", respinge_una_volta)
+    assert doc.save() == p
+    assert len(tentativi) == 2, "la scrittura dentro il file non ha riprovato"
     assert list(tmp_path.glob("*.tmp")) == [], "resta un provvisorio sul disco"
     doc.close()
 
