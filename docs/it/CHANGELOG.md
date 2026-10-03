@@ -47,6 +47,13 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
   Windows, dove la sostituzione non viene mai tentata: ora la prova apposta, e
   una seconda verifica copre il ritento della scrittura che Windows usa alla
   fine.
+- Il timer che chiude i dialoghi di una verifica continuava a girare anche
+  dopo che la verifica era finita, e chiudeva i dialoghi delle successive: una
+  firma disegnata a mano spariva da sola.
+- Una verifica misurava un trascinamento in punti PDF mentre il puntatore
+  viaggia in pixel di schermo: dove un pixel vale qualche punto il campo era
+  stato spostato correttamente e la verifica falliva lo stesso. Ora misura
+  dove il puntatore è arrivato davvero.
 
 ---
 

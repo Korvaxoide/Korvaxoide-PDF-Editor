@@ -46,6 +46,12 @@ the *About* window all read it from there.
 - The test for the retry when a file is briefly busy was skipped on Windows,
   where the substitution is never attempted: it now tries it on purpose, and
   a second test covers the retry of the write that Windows ends up using.
+- The timer that closes the dialogs of a test kept running after the test was
+  over, and closed the dialogs of the next ones: a signature drawn by hand
+  vanished on its own.
+- One test measured a drag in PDF points while the pointer travels in screen
+  pixels: where a pixel is worth several points the field was moved correctly
+  and the test failed anyway. It now measures where the pointer really went.
 
 ---
 

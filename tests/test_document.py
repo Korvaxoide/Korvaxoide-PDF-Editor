@@ -902,6 +902,7 @@ def test_salvataggio_riprova_se_il_file_e_temporaneamente_aperto(
 
     doc = Document()
     doc.open(str(p))
+    doc.rotate_pages([0], 90)
     vero = os.replace
     tentativi = []
 
@@ -912,12 +913,16 @@ def test_salvataggio_riprova_se_il_file_e_temporaneamente_aperto(
         return vero(a, b)
 
     monkeypatch.setattr(os, "replace", respinge_una_volta)
-    # su Windows la sostituzione non è tentata: qui si prova comunque, perché è
-    # il tentativo che va ripetuto
+    # su Windows la sostituzione non viene tentata: qui si prova comunque, perché è
+    # il tentativo che va ripetuto. Sul file che MuPDF ha aperto la sostituzione
+    # resta però impossibile anche al secondo tentativo: lì vengono respinti tutti
+    # e il salvataggio riesce scrivendo dentro. Conta che il rifiuto non abbia fatto
+    # fallire nulla e che ci sia stato un ritentativo
     monkeypatch.setattr(document, "_SOSTITUZIONE_DISPONIBILE", True)
     assert doc.save() == p
-    assert len(tentativi) == 2, "il salvataggio non ha riprovato"
+    assert len(tentativi) >= 2, "il salvataggio non ha riprovato"
     assert list(tmp_path.glob("*.tmp")) == [], "resta un provvisorio sul disco"
+    assert int(pymupdf.open(str(p))[0].rotation) == 90, "il file non è stato scritto"
     doc.close()
 
 

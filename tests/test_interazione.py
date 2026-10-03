@@ -88,6 +88,21 @@ class Utente:
         vista = self.w.view
         return vista.scene_obj.node(pagina).scenePos() + QPointF(x, y)
 
+    def punti_sotto_pixel(self, pagina: int, px: QPoint) -> QPointF:
+        """Punto in punti PDF che corrisponde a un pixel della vista.
+
+        Serve a misurare dove il puntatore si trova davvero: il mouse viaggia
+        in pixel interi, quindi un punto PDF richiesto e un punto PDF ottenuto
+        non coincidono mai, e la differenza dipende da quanti pixel vale un
+        punto su quella macchina.
+        """
+        vista = self.w.view
+        return vista._page_pos(vista.mapToScene(px))[1]
+
+    def margine_di_un_pixel(self) -> float:
+        """Quanti punti PDF vale un pixel della vista, con un pelo di respiro."""
+        return 2 / max(self.w.view.transform().m11(), 0.01)
+
     def clic_pagina(self, pagina: int, x: float, y: float) -> None:
         QTest.mouseClick(self.vista_viewport(), Qt.LeftButton, Qt.NoModifier,
                         self.punto_pagina(pagina, x, y))
@@ -122,7 +137,12 @@ def utente(finestra) -> Utente:
     finestra.load_path(str(_documento_modello()))
     for _ in range(10):
         QApplication.instance().processEvents()
-    return Utente(finestra)
+    u = Utente(finestra)
+    yield u
+    # il timer che chiude i dialoghi modali vive con l'utente finché l'oggetto
+    # esiste: lasciarlo acceso dopo il test lo faceva chiudere anche i dialoghi
+    # dei test successivi, e una firma disegnata a mano spariva da sola
+    u.timer.stop()
 
 
 def _documento_modello() -> str:
@@ -762,10 +782,27 @@ def test_spostare_un_campo_modulo(utente: Utente):
     campo = utente.campo("nome")
     prima = campo.rect
     utente.w.select_tool("select")
+    # il puntatore viaggia in pixel interi e la vista li traduce in punti PDF: si
+    # misura dove il puntatore arriva davvero e si chiede che il campo lo segua
+    # esattamente li. Confrontare con 60 punti fissi voleva dire che la prova
+    # dipendeva da quanti pixel vale un punto, che cambia da macchina a
+    # macchina: su quella del CI un pixel valeva qualche punto e il campo era
+    # stato spostato correttamente di 55,9.
+    inizio = utente.punto_pagina(0, 100, 184)
+    fine = utente.punto_pagina(0, 160, 224)
+    atteso = utente.punti_sotto_pixel(0, fine) - utente.punti_sotto_pixel(0, inizio)
+    assert atteso.x() > 40 and atteso.y() > 25, f"trascinamento troppo piccolo: {atteso}"
     utente.trascina(0, (100, 184), (160, 224), mods=Qt.AltModifier)
     nuovo = next(c.rect for c in utente.w.doc.fields() if c.xref == campo.xref)
-    assert abs((nuovo.x0 - prima.x0) - 60) <= 2, f"x: spostato di {nuovo.x0 - prima.x0}"
-    assert abs((nuovo.y0 - prima.y0) - 40) <= 2, f"y: spostato di {nuovo.y0 - prima.y0}"
+    margine = utente.margine_di_un_pixel()
+    zoom = utente.w.view.transform().m11()
+    assert abs((nuovo.x0 - prima.x0) - atteso.x()) <= margine, (
+        f"x: spostato di {nuovo.x0 - prima.x0}, attesi {atteso.x()} "
+        f"(pixel {inizio.x()},{inizio.y()} -> {fine.x()},{fine.y()}, zoom {zoom:.4f})"
+    )
+    assert abs((nuovo.y0 - prima.y0) - atteso.y()) <= margine, (
+        f"y: spostato di {nuovo.y0 - prima.y0}, attesi {atteso.y()} (zoom {zoom:.4f})"
+    )
 
 
 def _pagina_per_il_magnetismo(utente: Utente) -> int:
@@ -960,7 +997,8 @@ def test_firma_disegnata_col_mouse(finestra, monkeypatch):
     for _ in range(6):
         QApplication.instance().processEvents()
 
-    assert esito.get("vuoto") is False, "il riquadro di disegno non ha registrato il tratto"
+    assert esito, "il dialogo della firma non si è aperto"
+    assert esito["vuoto"] is False, "il riquadro di disegno non ha registrato il tratto"
     assert esito.get("immagine") is True, "la firma disegnata non ha prodotto un'immagine"
     assert len(finestra.doc.image_rects(0)) == prima + 1, "la firma non è finita nel documento"
     assert "firm" in finestra.lbl_status.text().lower(), finestra.lbl_status.text()
