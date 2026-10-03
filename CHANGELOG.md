@@ -1,0 +1,100 @@
+# Changelog
+
+> **Language:** English · [Italiano](docs/it/CHANGELOG.md)
+
+All notable changes to Korvaxoide: PDF Editor. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning is
+[semantic](https://semver.org/lang/en/).
+
+The version lives in a single place, `__version__` in `pdfeditor/__init__.py`:
+the AppImage name, the Windows executable name, the macOS bundle version and
+the *About* window all read it from there.
+
+---
+
+## 0.1.0 — 2026-10-03
+
+The first numbered release. Before this the number was `1.0.0` by default and
+meant nothing, because the program had never been published.
+
+### Interface
+
+The interface speaks Italian and English. The language follows the system by
+default and can be changed at any time from *Tools ▸ Language…* or from the
+preferences; menus and toolbars change straight away, open dialogs keep the
+language they were built with. The source keeps its Italian strings: they are
+the keys the English catalogue is written against, so a missing translation
+shows the Italian sentence instead of a blank.
+
+### Added
+
+- **Signatures**: freehand drawing with pen pressure and opacity, typed
+  signatures in calligraphic fonts, insertion from an image, background removal
+  (sampled colour, magic wand, threshold, eraser brush), a signature library
+  with renaming and reuse, placement into an existing signature field.
+- **Digital signatures** PKCS#7 with a P12/PEM or self-signed certificate, and
+  verification.
+- **Forms**: reading and writing AcroForm fields (text, checkbox, radio button,
+  combo box, push button, signature), in-place filling, creation of new fields
+  with properties, flattening and resetting.
+- **Annotations**: highlight, underline, strike out, squiggly, freehand ink,
+  shapes, note, stamp, attachment, link. Permanent redaction.
+- **Pages**: insert, duplicate, delete, extract, merge, split, reorder, rotate,
+  crop, numbering, page setup.
+- **Search and replace** with case, whole word and regular expressions, on
+  scanned PDFs too thanks to OCR.
+- **Security**: open password, permissions, AES-256 encryption, protection
+  removal, quality and accessibility checks.
+- **Export** to PNG/JPEG/TIFF, text, PDF/A (with Ghostscript), and printing.
+- **Preview of the signature** with the option to sign the open PDF.
+- **Undo and redo** of every change.
+- **Recovery**: a periodic copy, proposed at start-up after an unexpected
+  shutdown.
+- **Light and dark theme**, propagated to panels and dialogs.
+- Run from the source on Linux and Windows (`./run.sh`, `run.bat`), and
+  PyInstaller binaries for both systems (AppImage and `.exe`).
+- **English interface**, selectable and remembered, following the system when
+  no choice has been made.
+- Automated tests: 753 tests, an integration suite and an end-to-end check,
+  run on Linux and Windows with Python 3.12 and 3.14.
+
+### Fixed
+
+Defects found by going through the program feature by feature; the full list,
+with the cause of each one, is in the commit messages.
+
+- On a rotated page every shape and every drag landed in the opposite corner:
+  the view handed the engine screen coordinates while the document recorded
+  page coordinates.
+- Dragging across pages left the element on the wrong page.
+- A click in the gap between pages selected with invented coordinates.
+- Opening another file left a ghost selection behind: `Ctrl+C` and *Elimina*
+  failed.
+- Ticking a checkbox reopened its own editor and repeated the change
+  indefinitely, making the page vanish from the view.
+- In a radio-button group the parent covered all the options, so clicking any
+  of them switched them all off; several options could stay on at once.
+- Duplicating several pages picked the wrong ones and duplicated one of them
+  twice.
+- Selected text could not be cleared with a click.
+- `Ctrl+S` did not save, with or without changes.
+- Export lost title, author, subject and keywords.
+- Text replacement lost font, size and colour, wiped table borders and put the
+  new text under everything else on the page.
+- Snapping only worked horizontally.
+- Figures without alternative text were never reported.
+- Printing ignored the chosen page range and had no guard on the resolution or
+  on a printer error.
+- The text windows discarded the font, size, colour and alignment they had
+  collected, in favour of the toolbar's style.
+- The alpha channel was lost when moving or extracting an image, and a
+  palette-mode signature turned black.
+- After removing protection, every later save was refused.
+
+### Documentation
+
+- README as a presentation, with installation for Ubuntu and Windows.
+- Complete manual, organised by topic.
+- CONTRIBUTING with the code layout, the rules and the release procedure.
+- THIRD-PARTY with the licence of every dependency and the reason for the AGPL.
+- SECURITY with the private channel for security defects and the threat model.

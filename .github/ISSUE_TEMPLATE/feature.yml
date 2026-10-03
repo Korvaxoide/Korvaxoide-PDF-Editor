@@ -1,0 +1,30 @@
+name: Feature
+about: Something is missing
+title: ""
+labels:
+  - feature
+assignees: ""
+body: |
+  ## What you need
+
+  <!-- The problem to solve, not the solution: describe the situation you are
+       in and what it currently forces you to do. -->
+
+  ## Why it would help
+
+  <!-- With a concrete example it is much easier to tell whether it would help
+       other people too. -->
+
+  ## Alternatives
+
+  <!-- If you already worked around it another way, or if another program does
+       it, say so: the feature may exist already and just be hard to find. -->
+
+  ## Environment
+
+  | | |
+  | --- | --- |
+  | System | <!-- Ubuntu, Windows… --> |
+  | How it is used | <!-- one line: what you do with PDFs --> |
+
+  > The interface is in Italian, so quote menu entries as they appear.

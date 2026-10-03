@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Korvaxoide: PDF Editor
+GenericName=Editor PDF
+Comment=Editor PDF con firma, moduli e annotazioni
+Exec=KorvaxoidePDF %f
+Icon=korvaxoide-pdf-editor
+Terminal=false
+Categories=Office;Viewer;
+Keywords=pdf;editor;firma;moduli;annotazioni;documento;korvaxoide;
+MimeType=application/pdf;
+StartupNotify=true
+StartupWMClass=KorvaxoidePDF

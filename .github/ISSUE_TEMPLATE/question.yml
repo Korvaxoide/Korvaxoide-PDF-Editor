@@ -1,0 +1,25 @@
+name: Question
+about: How to use it
+title: ""
+labels:
+  - question
+assignees: ""
+body: |
+  ## What you are trying to do
+
+  <!-- Describe the goal, not the command: "I want to sign a PDF without
+       opening it in an editor" says far more than "how do I use signing". -->
+
+  ## What you have tried
+
+  <!-- The menu entries you looked for, what you read in the manual. -->
+
+  ## Environment
+
+  | | |
+  | --- | --- |
+  | System | <!-- Ubuntu, Windows… --> |
+
+  > The interface is in Italian, so quote menu entries as they appear.
+  > The manual is in [English](../../MANUAL.md) and
+  > [Italian](../../docs/it/MANUALE.md).

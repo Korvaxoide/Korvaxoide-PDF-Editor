@@ -1,0 +1,39 @@
+name: Bug
+about: Something does not work
+title: ""
+labels:
+  - bug
+assignees: ""
+body: |
+  ## What happens
+
+  <!-- What you did, and what happened instead. -->
+
+  ## What you expected
+
+  <!-- The behaviour you believe is correct. -->
+
+  ## Steps to reproduce
+
+  1.
+  2.
+  3.
+
+  <!-- A test document is almost always needed. If it cannot be shared
+       publicly, explain why and describe what it contains, at a high level. -->
+
+  ## Environment
+
+  | | |
+  | --- | --- |
+  | Program version | <!-- from *Informazioni sul programma* / About --> |
+  | System | <!-- Ubuntu 24.04, Windows 11… --> |
+  | How it was started | <!-- application menu, ./run.sh, AppImage, executable --> |
+  | External programs | <!-- tesseract yes/no · ghostscript yes/no --> |
+
+  ## Anything else
+
+  <!-- Status-bar text, the error message, how the defect shows up. A
+       screenshot helps when the problem is visual. -->
+
+  > The interface is in Italian: menu entries can be quoted as they appear.

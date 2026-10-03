@@ -1,0 +1,33 @@
+# Fine riga.
+#
+# Il progetto si sviluppa su Linux e si usa su Windows: senza questo file
+# git lascia che ogni sistema scriva il file a modo proprio e una modifica
+# fatta su Windows trasforma in CRLF un file che su Linux deve restare con
+# LF (e viceversa), mostrando come cambiamento l'intero file.
+#
+# Nel repository tutto e' LF; in checkout le eccezioni qui sotto vengono
+# rimescolate come serve al sistema.
+* text=auto eol=lf
+
+# Uno script batch con fine riga LF e' inaffidabile: `cmd.exe` lo esegue ma
+# sbaglia con `goto` e con i blocchi racchiusi tra parentesi.
+*.bat text eol=crlf
+
+# PowerShell accetta LF, ma i file che si aprono con Blocco note devono
+# stare bene su Windows.
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+
+# Questi tre devono restare LF anche su Windows: se diventano CRLF non si
+# eseguono e `sh` li rifiuta.
+*.sh text eol=lf
+*.py text eol=lf
+
+# File che non sono testo: git non deve toccare i fine riga.
+*.png binary
+*.ico binary
+*.icns binary
+*.pdf binary
+*.pdfa binary
+*.jpg binary
+*.ttf binary

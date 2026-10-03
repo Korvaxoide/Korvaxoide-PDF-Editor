@@ -1,0 +1,37 @@
+# ambiente Python
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# pacchetti compilati
+build/
+dist/
+*.AppImage
+*.spec.bak
+
+# risorse generate
+# Le icone sono disegnate a runtime da tools/make_icons.py, non si distribuisce
+# nessun file immagine: il programma le disegna con QPainter e non le legge da
+# disco. Tutte, PNG numerati compresi: erano esclusi solo quelli con il numero
+# nel nome e finivano nel repository .ico, .icns e il PNG grande, che sono
+# generati come gli altri e servono solo alla compilazione. build_linux.sh e
+# build_windows.ps1 li rigenerano prima di invocare PyInstaller.
+resources/icons/
+
+# file temporanei
+*.log
+*.tmp
+~$*
+
+# configurazione degli strumenti di sviluppo: resta sulla macchina di chi
+# lavora e non ha nulla a che fare con il progetto.
+#
+# .mcp.json e i tre documenti di passaggio sotto .agentsroom/ sono gia' esclusi
+# da quando esistono, ma chi usa un altro strumento di assistenza si ritrova
+# con gli stessi file non tracciati: senza questa sezione finirebbero nel
+# repository con `git add -A`, e .claude/settings.local.json contiene
+# percorsi assoluti della macchina di chi lo ha scritto.
+.mcp.json
+.agentsroom/
+.claude/
