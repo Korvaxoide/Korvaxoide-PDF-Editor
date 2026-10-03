@@ -35,6 +35,10 @@ the *About* window all read it from there.
 - The GitHub runners did not install what the suite needs to start: the Qt
   platform libraries, so Linux failed at import, and the fonts, so the
   signature tests drew on nothing.
+- The licence check failed the build when gnu.org could not be reached. A
+  download that fails says nothing about the repository: it is now retried
+  and, if the text still does not arrive, it warns and lets the build
+  through. Only a changed `LICENSE` stops a build now.
 
 ---
 

@@ -35,6 +35,10 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 - Le macchine GitHub non installavano ciò che serve alla suite per partire:
   le librerie di piattaforma di Qt, per cui il Linux falliva all'import, e i
   font, per cui le verifiche della firma non avevano nulla su cui scrivere.
+- Il controllo della licenza faceva fallire la build quando gnu.org non si
+  raggiungeva. Un download fallito non dice niente del repository: ora viene
+  ritentato e, se il testo non arriva, avvisa e lascia passare. A fermare la
+  build è adesso solo un `LICENSE` cambiato.
 
 ---
 

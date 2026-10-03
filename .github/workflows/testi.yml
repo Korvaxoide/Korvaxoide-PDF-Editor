@@ -21,7 +21,7 @@ jobs:
         # progetto e' stato sviluppato
         python: ["3.12", "3.14"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Librerie di sistema per Qt (Linux)
         if: runner.os == 'Linux'
@@ -42,7 +42,7 @@ jobs:
             fonts-liberation
 
       - name: Installa Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
           cache: pip
@@ -62,7 +62,7 @@ jobs:
     name: Integrazione (Linux)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Librerie di sistema per Qt (Linux)
         run: |
@@ -75,7 +75,7 @@ jobs:
             fonts-liberation
 
       - name: Installa Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -99,7 +99,7 @@ jobs:
     name: Coerenza delle licenze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # La documentazione resta leggibile anche quando e' rotta: un
       # collegamento a un file cancellato diventa una pagina 404 e non se ne
@@ -117,11 +117,24 @@ jobs:
       - name: Il testo della licenza è quello ufficiale
         run: |
           set -e
-          curl -sSfL https://www.gnu.org/licenses/agpl-3.0.txt -o /tmp/agpl.txt
+          # Il testo della licenza si prende da gnu.org e da qualche runner non
+          # si raggiunge: un download fallito non dice niente sul repository, e
+          # far fallire la build per una rete che non risponde blocca ogni
+          # merge per un motivo che non c'entra. Si ritenta qualche volta, e se
+          # il file non arriva il controllo avvisa e lascia passare: quello che
+          # deve interrompere la build è un LICENSE cambiato, non gnu.org
+          # irraggiungibile. E un file scaricato a metà non si confronta,
+          # altrimenti si paragonerebbe il repository con il nulla.
+          if ! curl -sSfL --retry 2 --retry-delay 3 --max-time 60 \
+               https://www.gnu.org/licenses/agpl-3.0.txt -o /tmp/agpl.txt; then
+            echo "::warning::gnu.org non raggiungibile: il testo della licenza non è stato verificato"
+            exit 0
+          fi
           if ! diff -q LICENSE /tmp/agpl.txt; then
             echo "::error::LICENSE non coincide con il testo AGPL-3.0 ufficiale"
             exit 1
           fi
+          echo "LICENSE coincide con il testo AGPL-3.0 ufficiale"
 
       - name: Ogni dipendenza è dichiarata
         run: |
