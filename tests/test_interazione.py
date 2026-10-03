@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
+import ambiente
 from pdfeditor.core import geometry as geo
 from pdfeditor.ui.main_window import MainWindow
 
@@ -138,7 +139,7 @@ def _documento_modello() -> str:
 
     from pdfeditor.core.document import Document
 
-    percorso = "/tmp/opencode/interazione.pdf"
+    percorso = str(ambiente.cartella("modelli") / "interazione.pdf")
     d = Document()
     d.new(595, 842)
     d.insert_text_box(0, pymupdf.Rect(50, 60, 520, 95), "Relazione annuale", fontsize=18)

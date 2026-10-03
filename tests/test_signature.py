@@ -10,9 +10,13 @@ import numpy as np
 import pytest
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+import ambiente
 from pdfeditor.signature import bgremove, manager, render, strokes as sk, typed
 
-SERIF = "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf"
+# il font della firma di prova: su Windows non c'e' nessun Liberation e senza
+# un font la foto sarebbe bianca, la rimozione dello sfondo cancellerebbe
+# tutto e otto controlli fallirebbero senza che il difetto fosse del programma
+SERIF = ambiente.font_serif()
 
 
 def make_canvas(points: int = 120) -> sk.SignatureCanvas:
@@ -27,10 +31,10 @@ def make_canvas(points: int = 120) -> sk.SignatureCanvas:
 
 
 def signature_photo(bg=(238, 238, 242), fg=(25, 30, 45), size=68, w=520, h=150, **kw) -> Image.Image:
+    if not SERIF:
+        pytest.skip("nessun font serif sul computer")
     img = Image.new("RGB", (w, h), bg)
     d = ImageDraw.Draw(img)
-    if not Path(SERIF).exists():
-        return img
     d.text((24, 30), "Mario Rossi", font=ImageFont.truetype(SERIF, size), fill=fg)
     if kw.get("blur"):
         img = img.filter(ImageFilter.GaussianBlur(kw["blur"]))

@@ -23,6 +23,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Librerie di sistema per Qt (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -e
+          # PySide6 porta con se' i suoi moduli ma non le librerie di sistema
+          # di cui Qt ha bisogno: senza libegl1 l'import di QtWidgets fallisce
+          # con «libEGL.so.1: cannot open shared object file» e la suite non
+          # raccoglie nessun test. Le Liberation servono perche' i test della
+          # firma e della rimozione dello sfondo scrivono un nome con un font
+          # serif, e su una macchina senza font la prova girerebbe su un foglio
+          # bianco.
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes \
+            libegl1 libgl1 libfontconfig1 libdbus-1-3 \
+            libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 \
+            libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 \
+            fonts-liberation
+
       - name: Installa Python
         uses: actions/setup-python@v5
         with:
@@ -45,6 +63,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Librerie di sistema per Qt (Linux)
+        run: |
+          set -e
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes \
+            libegl1 libgl1 libfontconfig1 libdbus-1-3 \
+            libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 \
+            libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 \
+            fonts-liberation
 
       - name: Installa Python
         uses: actions/setup-python@v5

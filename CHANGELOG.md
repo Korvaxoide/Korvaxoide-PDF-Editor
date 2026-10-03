@@ -12,6 +12,32 @@ the *About* window all read it from there.
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- Saving on Windows wrote nothing. MuPDF keeps open the file it opened the
+  document from, and Windows does not allow an open file to be replaced, so the
+  substitution always answered «Access is denied» and the new content was
+  never written. When the file cannot be replaced the content is now written
+  into it, after a few attempts: the file on disk stays valid and the reads
+  that follow are the ones of the document just rewritten. A file that stays
+  blocked by another program is now reported, instead of being passed off as
+  saved.
+
+### Tests
+
+- The suite ran only on Linux: it read from `/tmp`, looked for fonts under
+  `/usr/share/fonts`, counted a missing Ghostscript as a missing feature and
+  built an impossible path out of a directory that does not exist. Temporary
+  files, fonts and unusable paths now come from the helpers in
+  `tests/ambiente.py`, on every platform.
+- The GitHub runners did not install what the suite needs to start: the Qt
+  platform libraries, so Linux failed at import, and the fonts, so the
+  signature tests drew on nothing.
+
+---
+
 ## 0.1.0 — 2026-10-03
 
 The first numbered release. Before this the number was `1.0.0` by default and

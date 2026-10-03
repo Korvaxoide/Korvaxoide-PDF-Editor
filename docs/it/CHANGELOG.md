@@ -12,6 +12,32 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ---
 
+## Non pubblicato
+
+### Corretti
+
+- Su Windows il salvataggio non scriveva niente. MuPDF tiene aperto il file da
+  cui ha aperto il documento, e Windows non permette di sostituire un file
+  aperto: la sostituzione rispondeva sempre «Access is denied» e il
+  contenuto nuovo non arrivava mai sul disco. Quando il file non si può
+  sostituire il contenuto ci viene scritto dentro, dopo qualche tentativo: il
+  file resta valido e le letture successive sono quelle del documento appena
+  riscritto. Un file che un altro programma tiene bloccato viene ora
+  dichiarato tale, invece di essere dato per salvato.
+
+### Verifiche
+
+- La suite girava solo su Linux: leggeva da `/tmp`, cercava i font sotto
+  `/usr/share/fonts`, contava un Ghostscript assente come una funzione assente
+  e costruiva un percorso impossibile con una cartella che non esiste. File
+  temporanei, font e percorsi inutilizzabili vengono ora presi dagli
+  aiutanti di `tests/ambiente.py`, su ogni piattaforma.
+- Le macchine GitHub non installavano ciò che serve alla suite per partire:
+  le librerie di piattaforma di Qt, per cui il Linux falliva all'import, e i
+  font, per cui le verifiche della firma non avevano nulla su cui scrivere.
+
+---
+
 ## 0.1.0 — 2026-10-03
 
 Prima versione numerata. Prima di questa il numero era `1.0.0` di default e

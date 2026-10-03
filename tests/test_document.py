@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import io
+import os
 from pathlib import Path
 
 import pymupdf
 import pytest
 from PIL import Image
 
-from pdfeditor.core import geometry as geo
+from pdfeditor.core import document, geometry as geo
 from pdfeditor.core.document import Document, DocumentError
 
 
@@ -832,9 +833,115 @@ def test_salvataggio_senza_percorso_rifiutato(doc: Document):
         doc.save()
 
 
-def test_salvataggio_su_percorso_impossibile(doc: Document):
+def test_salvataggio_su_percorso_impossibile(doc: Document, tmp_path: Path):
+    """Un percorso che non puo' esistere deve essere un errore dichiarato.
+
+    Il percorso era ``/proc/inesistente/cartella/file.pdf``, che su Windows
+    diventa ``C:\\proc\\inesistente\\cartella\\file.pdf``: la CI lo creava
+    senza problemi e il salvataggio riusciva, quindi la prova non verificava
+    niente. Qui la cartella padre e' un file, e su ogni sistema non puo'
+    diventare una cartella.
+    """
+    ostacolo = tmp_path / "non_una_cartella"
+    ostacolo.write_bytes(b"questo e' un file")
     with pytest.raises(DocumentError, match="Salvataggio non riuscito"):
-        doc.save("/proc/inesistente/cartella/file.pdf")
+        doc.save(ostacolo / "cartella" / "file.pdf")
+
+
+def test_salvataggio_su_file_aperto_scrive_dentro(tmp_path: Path, monkeypatch):
+    """Salvare sul file aperto deve funzionare anche senza poterlo sostituire.
+
+    Su Windows un file aperto non si puo' sostituire, e il file da cui il
+    documento e' stato aperto e' aperto: MuPDF lo legge attraverso un handle
+    suo e ``os.replace`` finiva con «Access is denied», quindi salvare non
+    scriveva niente. Quando la sostituzione non e' possibile il contenuto
+    viene scritto dentro il file. Qui la condizione viene riprodotta per
+    costruzione, e la via di Windows viene provata anche su Linux: non
+    basta che non dia errore, il file deve restare valido e contenere le
+    modifiche, anche dopo un secondo salvataggio.
+    """
+    p = tmp_path / "aperto.pdf"
+    d = pymupdf.open()
+    d.new_page(width=400, height=600)
+    d.save(str(p))
+    d.close()
+
+    doc = Document()
+    doc.open(str(p))
+    monkeypatch.setattr(document, "_SOSTITUZIONE_DISPONIBILE", False)
+
+    doc.insert_text_box(0, pymupdf.Rect(50, 100, 350, 140), "Salvataggio", fontsize=18)
+    assert doc.save() == p
+    assert not doc.dirty
+    assert "Salvataggio" in pymupdf.open(str(p))[0].get_text()
+    assert list(tmp_path.glob("*.tmp")) == [], "resta un provvisorio sul disco"
+
+    # e ancora: il documento continua a poter essere salvato e letto
+    doc.rotate_pages([0], 90)
+    assert doc.save() == p
+    salvato = pymupdf.open(str(p))
+    assert int(salvato[0].rotation) == 90
+    assert "Salvataggio" in salvato[0].get_text()
+    doc.close()
+
+
+def test_salvataggio_riprova_se_il_file_e_temporaneamente_aperto(
+    tmp_path: Path, monkeypatch
+):
+    """Una sostituzione respinta al primo tentativo non deve far fallire tutto.
+
+    Un antivirus o un programma di sincronizzazione possono tenere il file
+    aperto per qualche decimo di secondo: il file deve essere scritto lo
+    stesso, e senza lasciare il provvisorio addosso.
+    """
+    p = tmp_path / "momentaneamente.pdf"
+    d = pymupdf.open()
+    d.new_page(width=400, height=600)
+    d.save(str(p))
+    d.close()
+
+    doc = Document()
+    doc.open(str(p))
+    vero = os.replace
+    tentativi = []
+
+    def respinge_una_volta(a, b):
+        tentativi.append((a, b))
+        if len(tentativi) == 1:
+            raise PermissionError(13, "file aperto")
+        return vero(a, b)
+
+    monkeypatch.setattr(os, "replace", respinge_una_volta)
+    assert doc.save() == p
+    assert len(tentativi) == 2, "il salvataggio non ha riprovato"
+    assert list(tmp_path.glob("*.tmp")) == [], "resta un provvisorio sul disco"
+    doc.close()
+
+
+def test_salvataggio_dichiara_un_file_bloccato(tmp_path: Path, monkeypatch):
+    """Un file che non si puo' ne' sostituire ne' scrivere va detto.
+
+    Tacere lascerebbe l'utente con un file che sembra salvato e che invece
+    e' quello di prima: peggio di un salvataggio dichiarato fallito.
+    """
+    p = tmp_path / "bloccato.pdf"
+    d = pymupdf.open()
+    d.new_page(width=400, height=600)
+    d.save(str(p))
+    d.close()
+
+    doc = Document()
+    doc.open(str(p))
+    monkeypatch.setattr(document, "_SOSTITUZIONE_DISPONIBILE", False)
+    monkeypatch.setattr(
+        document, "_scrivi_su_file_aperto",
+        lambda _a, _b: (_ for _ in ()).throw(PermissionError(13, "bloccato")),
+    )
+    with pytest.raises(DocumentError, match="aperto da un altro programma"):
+        doc.save()
+    assert list(tmp_path.glob("*.tmp")) == [], "resta un provvisorio sul disco"
+    doc.close()
+
 
 
 def test_salva_una_copia_non_tocca_la_sessione(tmp_path: Path):
@@ -856,9 +963,11 @@ def test_salva_una_copia_non_tocca_la_sessione(tmp_path: Path):
     d.close()
 
 
-def test_salva_una_copia_su_percorso_impossibile(doc: Document):
+def test_salva_una_copia_su_percorso_impossibile(doc: Document, tmp_path: Path):
+    ostacolo = tmp_path / "non_una_cartella"
+    ostacolo.write_bytes(b"questo e' un file")
     with pytest.raises(DocumentError, match="copia non riuscito"):
-        doc.save_copy("/proc/inesistente/cartella/copia.pdf")
+        doc.save_copy(ostacolo / "cartella" / "copia.pdf")
 
 
 # --------------------------------------------------------- inserimento pagine

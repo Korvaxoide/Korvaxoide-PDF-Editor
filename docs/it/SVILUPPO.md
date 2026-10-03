@@ -359,6 +359,28 @@ si scopriva solo alla verifica successiva, riavviando l'applicazione.
 Le cartelle sono calcolate a ogni chiamata leggendo le variabili d'ambiente,
 quindi basta spostarle: non serve alcun punto di aggancio nel codice.
 
+### I test devono passare anche su Windows
+
+La suite gira su Linux e su Windows, e un test che passa su un sistema e
+fallisce sull'altro è un difetto del test, non della macchina. Due famiglie di
+presupposti hanno causato quasi tutti quelli trovati:
+
+- **Percorsi che esistono solo su un sistema.** `/tmp/...`,
+  `/usr/share/fonts/...` e `/bin/true` su Windows non ci sono, e un errore di
+  permessi sollevato dal sistema operativo non è una proprietà del programma.
+  I file temporanei passano da `ambiente.cartella(...)` e
+  `ambiente.ricrea(...)`, che danno una cartella dentro quella che la suite ha
+  già isolato; i test che hanno bisogno di un percorso inutilizzabile lo
+  costruiscono mettendo un file dove dovrebbe stare una cartella.
+- **Font che esistono solo su un sistema.** Una firma disegnata con un font non
+  installato non fallisce: esce vuota o piena di quadratini, e il test che
+  controlla solo che il file sia stato scritto non se ne accorge.
+  `ambiente.font_serif()` restituisce un font che c'è davvero, e un test che ne
+  ha bisogno salta spiegandolo quando non ce ne sono.
+
+La regola vale anche per gli script a sé stanti: girano in CI come la suite,
+quindi prendono font e cartelle da `ambiente`.
+
 ### Cosa coprono le verifiche
 
 | File | Cosa verifica |

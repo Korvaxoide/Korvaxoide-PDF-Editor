@@ -628,7 +628,10 @@ def test_xmp_dichiara_il_livello_corretto():
 def test_conversione_pdfa(app, documento: Document, tmp_path: Path):
     from pdfeditor.ui import printing
 
-    if printing.find_ghostscript() is None:
+    if not printing.find_ghostscript():
+        # la funzione restituisce "" quando non c'e': con «is None» la
+        # prova non saltava mai e il salvataggio senza Ghostscript veniva
+        # letto come una conversione fallita
         pytest.skip("Ghostscript non è installato")
     out = tmp_path / "archiviazione.pdf"
     ok, msg = printing.convert_pdfa(documento, str(out), None, "2b")
@@ -646,7 +649,10 @@ def test_conversione_pdfa(app, documento: Document, tmp_path: Path):
 def test_conversione_pdfa_tutti_i_livelli(app, documento: Document, tmp_path: Path):
     from pdfeditor.ui import printing
 
-    if printing.find_ghostscript() is None:
+    if not printing.find_ghostscript():
+        # la funzione restituisce "" quando non c'e': con «is None» la
+        # prova non saltava mai e il salvataggio senza Ghostscript veniva
+        # letto come una conversione fallita
         pytest.skip("Ghostscript non è installato")
     for livello, parte in (("1b", "1"), ("2b", "2"), ("3b", "3")):
         out = tmp_path / f"a_{livello}.pdf"

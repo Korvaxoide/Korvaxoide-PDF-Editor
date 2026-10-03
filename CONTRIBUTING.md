@@ -356,6 +356,27 @@ next run, after restarting the application.
 The directories are computed on every call by reading environment variables, so
 moving them is enough: no hook point in the code is needed.
 
+### The tests have to run on Windows too
+
+The suite runs on Linux and on Windows, and a test that passes on one system
+and fails on the other is a defect in the test, not in the machine. Two
+families of assumptions caused most of them:
+
+- **Paths that only exist on one system.** `/tmp/...`, `/usr/share/fonts/...`
+  and `/bin/true` do not exist on Windows, and a permission error raised by the
+  operating system is not a property of the program either. Temporary files go
+  through `ambiente.cartella(...)` and `ambiente.ricrea(...)`, which give a
+  directory under the one the suite already isolated, and the tests that need
+  an unusable path build it from a file and a directory that cannot coexist.
+- **Fonts that only exist on one system.** A signature drawn with a font that
+  is not installed does not fail, it comes out empty or covered in squares,
+  and the test that only checks that the file was written says nothing about
+  it. `ambiente.font_serif()` returns a font that is really there, and a test
+  that needs one skips itself when there is none, saying why.
+
+The same rule applies to the standalone scripts: they are run in CI too, so
+they take their fonts and their folders from `ambiente`.
+
 ### What the tests cover
 
 | File | What it verifies |

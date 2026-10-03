@@ -8,7 +8,6 @@ ricerca, pagine, firma digitale, cifratura, stampa ed esportazione.
 from __future__ import annotations
 
 import os
-import shutil
 import sys
 from pathlib import Path
 
@@ -35,10 +34,14 @@ from pdfeditor.signature import bgremove, render, strokes as sk, typed  # noqa: 
 from pdfeditor.ui import theme  # noqa: E402
 from pdfeditor.ui.main_window import MainWindow  # noqa: E402
 
-OUT = Path("/tmp/opencode/finale")
-if OUT.exists():
-    shutil.rmtree(OUT, ignore_errors=True)
-OUT.mkdir(parents=True, exist_ok=True)
+OUT = ambiente.ricrea("finale")
+
+# la firma di prova viene scritta con un font serif: senza un font sul computer
+# l'immagine sarebbe un foglio bianco e la rimozione dello sfondo cancellerebbe
+# tutto, senza dire niente
+FONT = ambiente.font_serif()
+if not FONT:
+    raise SystemExit("nessun font serif sul computer: la verifica non può disegnare")
 
 app = QApplication.instance() or QApplication([])
 
@@ -159,7 +162,7 @@ check("firma disegnata trasparente", img_disegno.split()[3].getextrema()[0] == 0
 
 # 3b tastiera
 stile = typed.TypedStyle(
-    font_path="/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf",
+    font_path=FONT,
     size=86, color=(14, 26, 62), slant=0.30, wobble=0.28, rotate=2.4,
 )
 img_tastiera = typed.render_typed("Mario Rossi", stile)
@@ -169,7 +172,7 @@ check("firma digitata resa", img_tastiera.split()[3].getbbox() is not None, f"{i
 foto = Image.new("RGB", (520, 160), (118, 176, 214))
 ImageDraw.Draw(foto).text(
     (22, 32), "Mario Rossi",
-    font=ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf", 64),
+    font=ImageFont.truetype(FONT, 64),
     fill=(28, 32, 48),
 )
 scelta = bgremove.suggest_method(foto)

@@ -1,7 +1,6 @@
 """Prova di integrazione della finestra principale (headless)."""
 
 import os
-import shutil
 import sys
 from pathlib import Path
 
@@ -21,12 +20,14 @@ from pdfeditor.core import settings as sm  # noqa: E402
 from pdfeditor.ui import theme  # noqa: E402
 from pdfeditor.ui.main_window import MainWindow  # noqa: E402
 
-TMP = Path("/tmp/opencode/integration")
-# directory pulita: la libreria delle firme e il recupero accumulerebbero stato
-# tra un'esecuzione e l'altra
-if TMP.exists():
-    shutil.rmtree(TMP, ignore_errors=True)
-TMP.mkdir(parents=True, exist_ok=True)
+TMP = ambiente.ricrea("integration")
+
+# la firma di prova viene scritta con un font serif: senza un font sul computer
+# l'immagine sarebbe un foglio bianco e la rimozione dello sfondo cancellerebbe
+# tutto, senza dire niente
+FONT = ambiente.font_serif()
+if not FONT:
+    raise SystemExit("nessun font serif sul computer: la verifica non può disegnare")
 
 app = QApplication.instance() or QApplication([])
 st = sm.Settings()
@@ -161,7 +162,7 @@ check("firma digitata non vuota", img_type.split()[3].getbbox() is not None)
 photo = Image.new("RGB", (460, 150), (238, 238, 242))
 ImageDraw.Draw(photo).text(
     (24, 30), "Mario Rossi",
-    font=ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf", 68),
+    font=ImageFont.truetype(FONT, 68),
     fill=(25, 30, 45),
 )
 for method in ("white", "luminance", "flood", "border", "color"):
