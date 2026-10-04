@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -66,6 +67,49 @@ def finestra(app):
     # evitata, altrimenti il processo resterebbe in attesa
     w.closeEvent = lambda *_a: None
     w.close()
+
+
+@pytest.fixture(autouse=True)
+def _un_dialogo_modale_non_puo_fermare_la_suite():
+    """Chiude ciò che è rimasto aperto troppo a lungo, prima che la suite si fermi.
+
+    Un dialogo modale gira un ciclo di eventi tutto suo: se la verifica aspetta
+    che qualcuno lo chiuda e nessuno lo fa, l'attesa non finisce mai. Successe
+    anche per un solo test, e la macchina restò occupata sei ore. Qui un
+    dialogo o un avviso visibile da più di qualche secondo viene chiuso: la
+    verifica che non arriva da nessuna parte fallisce e la suite va avanti.
+
+    Il timer appartiene a questa verifica e muore con lei: se sopravvivesse,
+    chiuderebbe i dialogi delle verifiche successive.
+    """
+    from PySide6.QtCore import QTimer
+    from PySide6.QtWidgets import QApplication, QDialog
+
+    app = QApplication.instance()
+    if app is None:  # una verifica senza interfaccia non ha dialoghi
+        yield
+        return
+
+    da_quando: dict[object, float] = {}
+
+    def chiudi():
+        adesso = time.monotonic()
+        for w in list(app.topLevelWidgets()):
+            if isinstance(w, QDialog) and w.isModal() and w.isVisible():
+                if w not in da_quando:
+                    da_quando[w] = adesso
+                elif adesso - da_quando[w] > 5:
+                    w.reject()
+            else:
+                da_quando.pop(w, None)
+
+    timer = QTimer()
+    timer.setInterval(500)
+    timer.timeout.connect(chiudi)
+    timer.start()
+    yield
+    timer.stop()
+    da_quando.clear()
 
 
 def test_i_test_non_toccano_i_dati_utente():

@@ -54,6 +54,11 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
   viaggia in pixel di schermo: dove un pixel vale qualche punto il campo era
   stato spostato correttamente e la verifica falliva lo stesso. Ora misura
   dove il puntatore è arrivato davvero.
+- Un dialogo lasciato aperto poteva fermare tutta la suite, e una suite ferma
+  teneva la macchina occupata finché la piattaforma si arrengeva dopo sei ore.
+  Ora un dialogo che nessuno chiude viene chiuso dopo qualche secondo e ogni
+  verifica ha un tempo massimo: una verifica bloccata fallisce in minuti e
+  dice quale è stata.
 
 ---
 

@@ -957,7 +957,16 @@ def test_firma_disegnata_col_mouse(finestra, monkeypatch):
     Il riquadro di disegno accettava nessun tratto: al primo clic lo spacchettava
     male la posizione del puntatore e al primo movimento chiamava un metodo
     dell'evento che in Qt 6 non esiste. Il dialogo si apriva, ma restava vuoto.
+
+    Il dialogo è modale e gira il proprio ciclo di eventi, quindi qui si entra
+    dentro e si deve anche uscire: si aspetta che il riquadro sia collocato,
+    si traccia tenendo premuto il tasto e, qualunque cosa accada, il dialogo
+    viene chiuso. Senza questo la suite restava appesa: «Inserisci» su un
+    riquadro vuoto apre un avviso modale, e un avviso che nessuno chiude tiene
+    aperto il ciclo di eventi per sempre.
     """
+    import time
+
     from PySide6.QtCore import QPoint, QTimer
     from PySide6.QtWidgets import QDialogButtonBox
 
@@ -968,14 +977,40 @@ def test_firma_disegnata_col_mouse(finestra, monkeypatch):
         QApplication.instance().processEvents()
     prima = len(finestra.doc.image_rects(0))
     esito = {}
+    scadenza = time.monotonic() + 20
+
+    def chiudi_quello_che_resta():
+        for wid in QApplication.instance().topLevelWidgets():
+            if isinstance(wid, QMessageBox) and wid.isVisible():
+                wid.close()
+            elif isinstance(wid, SignatureDialog) and wid.isVisible():
+                wid.reject()
 
     def pilota():
+        if time.monotonic() > scadenza:
+            esito["scaduto"] = True
+            chiudi_quello_che_resta()
+            return
+        # un avviso del dialogo è modale a sua volta: chiuderlo o il ciclo di
+        # eventi non si chiude
+        for wid in QApplication.instance().topLevelWidgets():
+            if isinstance(wid, QMessageBox) and wid.isVisible():
+                wid.close()
+                return
+        if esito:  # il tratto è già stato tracciato: non rifarlo
+            return
         for wid in QApplication.instance().topLevelWidgets():
             if not isinstance(wid, SignatureDialog) or not wid.isVisible():
                 continue
             pad = wid.pad
+            if pad.width() < 50 or pad.height() < 50:
+                # non ancora collocato: i tratti cadrebbero fuori dal riquadro
+                return
             QTest.mousePress(pad, Qt.LeftButton, Qt.NoModifier, QPoint(40, 110))
             for i in range(20):
+                # il riquadro continua il tratto finche' il tasto e' premuto:
+                # `mouseMove` non accetta i modificatori, ma il riquadro segue
+                # la pressione registrata sopra
                 QTest.mouseMove(pad, QPoint(40 + i * 24, 110 - 34 * ((i % 8) - 4) / 4))
             QTest.mouseRelease(pad, Qt.LeftButton, Qt.NoModifier, QPoint(500, 110))
             for _ in range(3):
@@ -987,17 +1022,21 @@ def test_firma_disegnata_col_mouse(finestra, monkeypatch):
                 if b.text() == "Inserisci":
                     b.click()
                     return
+            wid.reject()
 
     timer = QTimer()
-    timer.setInterval(80)
+    timer.setInterval(50)
     timer.timeout.connect(pilota)
     timer.start()
-    finestra.action_signature()
-    timer.stop()
+    try:
+        finestra.action_signature()
+    finally:
+        timer.stop()
     for _ in range(6):
         QApplication.instance().processEvents()
 
-    assert esito, "il dialogo della firma non si è aperto"
+    assert esito, "il riquadro di disegno non è mai diventato pronto"
+    assert not esito.get("scaduto"), "il dialogo della firma non si è chiuso"
     assert esito["vuoto"] is False, "il riquadro di disegno non ha registrato il tratto"
     assert esito.get("immagine") is True, "la firma disegnata non ha prodotto un'immagine"
     assert len(finestra.doc.image_rects(0)) == prima + 1, "la firma non è finita nel documento"

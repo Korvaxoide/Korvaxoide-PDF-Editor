@@ -51,12 +51,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip install pytest
+          # pytest-timeout non serve alle verifiche, serve a farle finite: una
+          # verifica appesa su un dialogo modale ha tenuto la macchina sei ore
+          # prima che la piattaforma la spegnesse. Con il limite, un blocco
+          # diventa un fallimento in pochi minuti e dice quale prova è stata
+          python -m pip install pytest pytest-timeout
 
       - name: Test
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -m pytest tests/ -q
+        run: python -m pytest tests/ -q --timeout=300
 
   integrazione:
     name: Integrazione (Linux)
