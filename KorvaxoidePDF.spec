@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Specifica PyInstaller per Korvaxoide: PDF Editor.
+"""Specifica PyInstaller per Korvaxoide PDF Editor.
 
 Un unico file per Windows, Linux e macOS: il sistema viene rilevato da
 PyInstaller. Dopo la raccolta viene eseguita una potatura dei moduli Qt non
@@ -242,7 +242,7 @@ if IS_MACOS:
         bundle_identifier="it.korvaxoide.pdfeditor",
         info_plist={
             "CFBundleName": "Korvaxoide PDF Editor",
-            "CFBundleDisplayName": "Korvaxoide: PDF Editor",
+            "CFBundleDisplayName": "Korvaxoide PDF Editor",
             "CFBundleShortVersionString": VERSION,
             "CFBundleVersion": VERSION,
             "NSHighResolutionCapable": True,

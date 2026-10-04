@@ -2,7 +2,7 @@
 
 > **Language:** English · [Italiano](docs/it/CHANGELOG.md)
 
-All notable changes to Korvaxoide: PDF Editor. The format follows
+All notable changes to Korvaxoide PDF Editor. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning is
 [semantic](https://semver.org/lang/en/).
 
@@ -13,6 +13,16 @@ the *About* window all read it from there.
 ---
 
 ## Unreleased
+
+### Changed
+
+- The program is now called Korvaxoide PDF Editor everywhere it names itself:
+  the window title, the *About* window, the menu entry, the macOS bundle, the
+  producer written into every exported PDF and the documentation. The colon of
+  the old "Korvaxoide: PDF Editor" is gone. The repository address, the file
+  names and the configuration folders stay as they are: they belong to the
+  installation rather than to the name on the label, and renaming them would
+  strand the settings of the people already using the program.
 
 ### Fixed
 

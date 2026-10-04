@@ -1,5 +1,5 @@
 @echo off
-REM Avvia Korvaxoide: PDF Editor da sorgente (Windows).
+REM Avvia Korvaxoide PDF Editor da sorgente (Windows).
 REM
 REM   run.bat            installa se serve e avvia il programma
 REM   run.bat --solo     installa le dipendenze senza avviare

@@ -1,4 +1,4 @@
-# Developing Korvaxoide: PDF Editor
+# Developing Korvaxoide PDF Editor
 
 > **Language:** English · [Italiano](docs/it/SVILUPPO.md)
 
@@ -487,7 +487,7 @@ position, joining the blocks of the same line.
 7. Update the licences list in `THIRD-PARTY.md`.
 8. Update `CHANGELOG.md` with what changed in this version.
 9. Commit with a message that explains the cause, not only the symptom.
-10. Tag the release: `git tag -a v0.1.0 -m "Korvaxoide: PDF Editor 0.1.0"`, then
+10. Tag the release: `git tag -a v0.1.0 -m "Korvaxoide PDF Editor 0.1.0"`, then
     push the tag. The tag is what makes the AGPL source obligation easy to
     meet: the release page offers the matching source in one click.
 
