@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Avvia Korvaxoide: PDF Editor da sorgente (Linux/macOS).
+# Avvia Korvaxoide PDF Editor da sorgente (Linux/macOS).
 set -euo pipefail
 cd "$(dirname "$0")"
 

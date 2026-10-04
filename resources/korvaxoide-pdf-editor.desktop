@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Version=1.0
-Name=Korvaxoide: PDF Editor
+Name=Korvaxoide PDF Editor
 GenericName=Editor PDF
 Comment=Editor PDF con firma, moduli e annotazioni
 Exec=KorvaxoidePDF %f

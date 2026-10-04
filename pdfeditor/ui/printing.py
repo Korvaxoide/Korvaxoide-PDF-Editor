@@ -171,7 +171,7 @@ def convert_pdfa(doc: docmod.Document, path: str, pages: list[int], level: str =
                 d.set_metadata(
                     {
                         **meta,
-                        "producer": f"Korvaxoide: PDF Editor (PDF/A {level} non applicato)",
+                        "producer": f"Korvaxoide PDF Editor (PDF/A {level} non applicato)",
                     }
                 )
                 d.save(str(provvisorio) + ".tmp", garbage=3, deflate=True)
@@ -235,7 +235,7 @@ def _stamp_pdfa_metadata(path: str, level: str) -> bool:
     d = pymupdf.open(path)
     try:
         meta = dict(d.metadata or {})
-        meta["producer"] = f"Korvaxoide: PDF Editor (PDF/A {level})"
+        meta["producer"] = f"Korvaxoide PDF Editor (PDF/A {level})"
         d.set_metadata(meta)
         # ``set_xml_metadata`` sostituisce l'intero pacchetto: ricostruirlo da
         # zero cancellava autore, titolo e gli altri metadati XMP che il
@@ -282,8 +282,8 @@ def _xmp(
     autore = _xml_escape(info.get("author") or "")
     soggetto = _xml_escape(info.get("subject") or "")
     parole = _xml_escape(info.get("keywords") or "")
-    produttore = _xml_escape(info.get("producer") or "Korvaxoide: PDF Editor")
-    strumento = _xml_escape(info.get("creator") or "Korvaxoide: PDF Editor")
+    produttore = _xml_escape(info.get("producer") or "Korvaxoide PDF Editor")
+    strumento = _xml_escape(info.get("creator") or "Korvaxoide PDF Editor")
 
     # il pacchetto esistente viene conservato: aggiungere una seconda sezione
     # rdf:Description mantiene autore, titolo e campi personalizzati

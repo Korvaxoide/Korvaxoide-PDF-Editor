@@ -1,4 +1,4 @@
-# Manuale di Korvaxoide: PDF Editor
+# Manuale di Korvaxoide PDF Editor
 
 > **Lingua:** Italiano · [English](../../MANUAL.md)
 

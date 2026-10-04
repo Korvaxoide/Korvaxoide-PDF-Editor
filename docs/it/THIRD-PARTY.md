@@ -2,7 +2,7 @@
 
 > **Lingua:** Italiano · [English](../../THIRD-PARTY.md)
 
-Korvaxoide: PDF Editor è software libero rilasciato sotto **GNU AGPL-3.0** (vedi
+Korvaxoide PDF Editor è software libero rilasciato sotto **GNU AGPL-3.0** (vedi
 [LICENSE](../../LICENSE)). Tutto il codice di `pdfeditor/`, `tools/`, `tests/` e degli
 script di compilazione è originale di questo progetto.
 
@@ -46,7 +46,7 @@ questo file, nel README e nelle intestazioni dei sorgenti.
 
 L'eccezione di PyInstaller autorizza esplicitamente a includere il proprio
 codice in applicazioni proprietarie e non copyleft: la compilazione non
-introduce obblighi sulla licenza di Korvaxoide: PDF Editor.
+introduce obblighi sulla licenza di Korvaxoide PDF Editor.
 
 ### Programmi esterni opzionali
 

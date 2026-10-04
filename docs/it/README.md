@@ -1,4 +1,4 @@
-# Korvaxoide: PDF Editor
+# Korvaxoide PDF Editor
 
 > **Lingua:** Italiano · [English](../../README.md)
 
@@ -35,10 +35,10 @@ Nessun documento lascia il computer: il programma non usa la rete.
 
 ## Che cosa fa
 
-Korvaxoide è un editor di PDF completo: annota, compila moduli, firma, cerca e
-sostituisce, riconosce il testo nelle scansioni, protegge il documento e lo
-esporta in altri formati. Funziona su Linux e su Windows con la stessa
-interfaccia.
+Korvaxoide PDF Editor è un editor di PDF completo: annota, compila moduli,
+firma, cerca e sostituisce, riconosce il testo nelle scansioni, protegge il
+documento e lo esporta in altri formati. Funziona su Linux e su Windows con
+la stessa interfaccia.
 
 Le caratteristiche che lo distinguono:
 
@@ -370,7 +370,8 @@ chiedere: la firma digitale richiede un'azione esplicita.
 
 ## Programmi esterni opzionali
 
-Korvaxoide funziona senza nulla di tutto questo; servono per funzioni in più.
+Korvaxoide PDF Editor funziona senza nulla di tutto questo; servono per funzioni
+in più.
 
 | Programma | Serve per | Senza |
 | --- | --- | --- |
@@ -539,4 +540,4 @@ git clone https://github.com/Korvaxoide/Korvaxoide-PDF-Editor.git
 git checkout 0.1.0
 ```
 
-Korvaxoide non dà nessuna garanzia: è fornito «così com'è».
+Korvaxoide PDF Editor non dà nessuna garanzia: è fornito «così com'è».

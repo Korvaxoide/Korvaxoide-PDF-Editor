@@ -1,4 +1,4 @@
-# Sviluppo di Korvaxoide: PDF Editor
+# Sviluppo di Korvaxoide PDF Editor
 
 > **Lingua:** Italiano · [English](../../CONTRIBUTING.md)
 
@@ -483,7 +483,7 @@ posizione, unendo i blocchi della stessa riga.
 6. Windows: `.\build_windows.ps1 -OneDir`
 7. Aggiornare l'elenco delle licenze in `THIRD-PARTY.md`.
 8. Commit con un messaggio che spieghi la causa, non solo il sintomo.
-9. Tag git con la versione: `git tag -a v0.1.0 -m "Korvaxoide: PDF Editor 0.1.0"`.
+9. Tag git con la versione: `git tag -a v0.1.0 -m "Korvaxoide PDF Editor 0.1.0"`.
 
 La versione `0.1.0` è la prima numerata: prima della versione era `1.0.0` di
 default e non voleva dire niente, perché il programma non era mai stato
