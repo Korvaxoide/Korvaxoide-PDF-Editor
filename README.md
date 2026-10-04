@@ -8,7 +8,7 @@ No document ever leaves your computer: the program does not use the network.
 ![Python](https://img.shields.io/badge/python-3.12%2B-3776ab)
 ![Qt](https://img.shields.io/badge/Qt-6-41cd52)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-8b5cf6)
-![Tests](https://img.shields.io/badge/tests-753%20passed-4c1.svg)
+![Tests](https://img.shields.io/badge/tests-769%20passed-4c1.svg)
 
 ---
 
@@ -498,7 +498,7 @@ The rules followed:
 ## Tests
 
 ```bash
-./venv/bin/python -m pytest tests/ -q     # 722 tests
+./venv/bin/python -m pytest tests/ -q     # 769 tests
 ./venv/bin/python tests/integration.py    # 80 integration checks
 ./venv/bin/python tests/finale.py         # 46 end-to-end checks
 ./venv/bin/python tests/visual.py         # interface captures

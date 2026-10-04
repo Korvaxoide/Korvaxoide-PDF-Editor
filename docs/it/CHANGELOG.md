@@ -14,73 +14,7 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ## Non pubblicato
 
-### Cambiato
-
-- Il programma ora si chiama Korvaxoide PDF Editor ovunque si nomini: il titolo
-  della finestra, la finestra *Informazioni sul programma*, la voce di menu, il
-  pacchetto macOS, il produttore scritto in ogni PDF esportato e la
-  documentazione. Il due punti del vecchio «Korvaxoide: PDF Editor» è sparito.
-  L'indirizzo del repository, i nomi dei file e le cartelle di configurazione
-  restano come sono: appartengono all'installazione e non al nome sulla
-  etichetta, e rinominarli lascerebbe senza posto le impostazioni di chi usa
-  già il programma.
-
-### Corretti
-
-- Su Windows il salvataggio non scriveva niente. MuPDF tiene aperto il file da
-  cui ha aperto il documento, e Windows non permette di sostituire un file
-  aperto: la sostituzione rispondeva sempre «Access is denied» e il
-  contenuto nuovo non arrivava mai sul disco. Quando il file non si può
-  sostituire il contenuto ci viene scritto dentro, dopo qualche tentativo: il
-  file resta valido e le letture successive sono quelle del documento appena
-  riscritto. Un file che un altro programma tiene bloccato viene ora
-  dichiarato tale, invece di essere dato per salvato.
-
-### Verifiche
-
-- La suite girava solo su Linux: leggeva da `/tmp`, cercava i font sotto
-  `/usr/share/fonts`, contava un Ghostscript assente come una funzione assente
-  e costruiva un percorso impossibile con una cartella che non esiste. File
-  temporanei, font e percorsi inutilizzabili vengono ora presi dagli
-  aiutanti di `tests/ambiente.py`, su ogni piattaforma.
-- Le macchine GitHub non installavano ciò che serve alla suite per partire:
-  le librerie di piattaforma di Qt, per cui il Linux falliva all'import, e i
-  font, per cui le verifiche della firma non avevano nulla su cui scrivere.
-- Il controllo della licenza faceva fallire la build quando gnu.org non si
-  raggiungeva. Un download fallito non dice niente del repository: ora viene
-  ritentato e, se il testo non arriva, avvisa e lascia passare. A fermare la
-  build è adesso solo un `LICENSE` cambiato.
-- Cinquanta verifiche di interazione fallivano su Windows prima ancora di un
-  clic: il PDF usato come modello veniva riscritto, nome compreso, mentre una
-  finestra lo teneva aperto, e Windows non permette di riscriverlo. Ogni
-  verifica costruisce adesso il proprio modello.
-- La verifica del ritento quando un file è occupato per un momento saltava su
-  Windows, dove la sostituzione non viene mai tentata: ora la prova apposta, e
-  una seconda verifica copre il ritento della scrittura che Windows usa alla
-  fine.
-- Il timer che chiude i dialoghi di una verifica continuava a girare anche
-  dopo che la verifica era finita, e chiudeva i dialoghi delle successive: una
-  firma disegnata a mano spariva da sola.
-- Una verifica misurava un trascinamento in punti PDF mentre il puntatore
-  viaggia in pixel di schermo: dove un pixel vale qualche punto il campo era
-  stato spostato correttamente e la verifica falliva lo stesso. Ora misura
-  dove il puntatore è arrivato davvero.
-- Un dialogo lasciato aperto poteva fermare tutta la suite, e una suite ferma
-  teneva la macchina occupata finché la piattaforma si arrengeva dopo sei ore.
-  Ora un dialogo che nessuno chiude viene chiuso dopo qualche secondo e ogni
-  verifica ha un tempo massimo: una verifica bloccata fallisce in minuti e
-  dice quale è stata.
-- Taglia e Incolla su un elemento che non li accetta sollevavano un errore
-  interno invece di dirlo: il messaggio era costruito con una parola diversa
-  dal suo segnaposto. Ora ogni messaggio con un valore dentro viene confrontato
-  con i suoi segnaposto.
-- «Terze parti» apriva davvero il browser e su una macchina senza browser la
-  chiamata non tornava mai: la verifica che preme ogni voce di menu registra
-  l'indirizzo invece di aprirlo.
-
----
-
-## 0.1.0 — 2026-10-03
+## 0.1.0 — 2026-10-04
 
 Prima versione numerata. Prima di questa il numero era `1.0.0` di default e
 non voleva dire niente, perché il programma non era mai stato pubblicato.
@@ -123,8 +57,19 @@ frase italiana invece di uno spazio vuoto.
 - **Tema chiaro e scuro**, propagato a pannelli e finestre.
 - Avvio dalla sorgente su Linux e Windows (`./run.sh`, `run.bat`) ed eseguibile
   per entrambi i sistemi con PyInstaller (AppImage e `.exe`).
-- Verifiche automatiche: 753 test, suite di integrazione e collaudo del
+- Verifiche automatiche: 769 test, suite di integrazione e collaudo del
   flusso di lavoro, in esecuzione su Linux e Windows con Python 3.12 e 3.14.
+
+### Cambiato
+
+- Il programma ora si chiama Korvaxoide PDF Editor ovunque si nomini: il titolo
+  della finestra, la finestra *Informazioni sul programma*, la voce di menu, il
+  pacchetto macOS, il produttore scritto in ogni PDF esportato e la
+  documentazione. Il due punti del vecchio «Korvaxoide: PDF Editor» è sparito.
+  L'indirizzo del repository, i nomi dei file e le cartelle di configurazione
+  restano come sono: appartengono all'installazione e non al nome sulla
+  etichetta, e rinominarli lascerebbe senza posto le impostazioni di chi usa
+  già il programma.
 
 ### Corretto
 
@@ -147,7 +92,7 @@ con la causa di ognuno, è nei messaggi di commit.
 - Duplicare più pagine sceglieva quelle sbagliate e ne duplicava una due
   volte.
 - Il testo selezionato non si poteva togliere con un clic.
-- `Ctrl+S` non salvava, con o senza modifiche.
+- `Ctrl+S` non salvava, con o senza modificazioni.
 - L'esportazione perdeva titolo, autore, oggetto e parole chiave.
 - La sostituzione del testo perdeva font, corpo e colore, cancellava le
   cornici delle tabelle e metteva il testo sotto tutto il resto della pagina.
@@ -161,6 +106,31 @@ con la causa di ognuno, è nei messaggi di commit.
   paletta diventava nera.
 - Dopo la rimozione della protezione ogni salvataggio successivo era
   rifiutato.
+- Su Windows il salvataggio non scriveva niente. MuPDF tiene aperto il file da
+  cui ha aperto il documento, e Windows non permette di sostituire un file
+  aperto: la sostituzione rispondeva sempre «Access is denied» e il
+  contenuto nuovo non arrivava mai sul disco. Quando il file non si può
+  sostituire il contenuto ci viene scritto dentro, dopo qualche tentativo: il
+  file resta valido e le letture successive sono quelle del documento appena
+  riscritto. Un file che un altro programma tiene bloccato viene ora
+  dichiarato tale, invece di essere dato per salvato.
+
+La distribuzione era rotta anch'essa, e un rilascio è esattamente il posto in
+cui si vede.
+
+- La compilazione Linux non arrivava mai all'AppImage. La cartella che
+  assemblava aveva un percorso relativo e `appimagetool` veniva chiamato da
+  dentro `dist/`, quindi cercava `dist/dist/…`, non trovava niente e la
+  compilazione si fermava con un errore che non dice la causa. Il percorso è
+  ora assoluto.
+- L'AppImage non partiva neppure quando la cartella veniva messa insieme a
+  mano: dentro non c'era `AppRun`, il runtime montava l'immagine, non trovava
+  nulla da eseguire e usciva con «Failed to run AppRun». `build_linux.sh` ora
+  scrive l'`AppRun` che avvia il programma.
+- La voce di menu e l'AppImage non avevano icona. Il file veniva installato con
+  il nome del programma mentre la voce di menu chiede
+  `korvaxoide-pdf-editor`, la ricerca non trovava niente e la voce restava con
+  il simbolo generico.
 
 ### Documentazione
 
@@ -169,3 +139,45 @@ con la causa di ognuno, è nei messaggi di commit.
 - SVILUPPO con organizzazione del codice, regole e procedura di rilascio.
 - THIRD-PARTY con le licenze di ogni dipendenza e il motivo della scelta
   AGPL.
+
+### Verifiche
+
+- La suite girava solo su Linux: leggeva da `/tmp`, cercava i font sotto
+  `/usr/share/fonts`, contava un Ghostscript assente come una funzione assente
+  e costruiva un percorso impossibile con una cartella che non esiste. File
+  temporanei, font e percorsi inutilizzabili vengono ora presi dagli
+  aiutanti di `tests/ambiente.py`, su ogni piattaforma.
+- Le macchine GitHub non installavano ciò che serve alla suite per partire:
+  le librerie di piattaforma di Qt, per cui il Linux falliva all'import, e i
+  font, per cui le verifiche della firma non avevano nulla su cui scrivere.
+- Il controllo della licenza faceva fallire la build quando gnu.org non si
+  raggiungeva. Un download fallito non dice niente del repository: ora viene
+  ritentato e, se il testo non arriva, avvisa e lascia passare. A fermare la
+  build è adesso solo un `LICENSE` cambiato.
+- Cinquanta verifiche di interazione fallivano su Windows prima ancora di un
+  clic: il PDF usato come modello veniva riscritto, nome compreso, mentre una
+  finestra lo teneva aperto, e Windows non permette di riscriverlo. Ogni
+  verifica costruisce adesso il proprio modello.
+- La verifica del ritento quando un file è occupato per un momento saltava su
+  Windows, dove la sostituzione non viene mai tentata: ora la prova apposta, e
+  una seconda verifica copre il ritento della scrittura che Windows usa alla
+  fine.
+- Il timer che chiude i dialoghi di una verifica continuava a girare anche
+  dopo che la verifica era finita, e chiudeva i dialoghi delle successive: una
+  firma disegnata a mano spariva da sola.
+- Una verifica misurava un trascinamento in punti PDF mentre il puntatore
+  viaggia in pixel di schermo: dove un pixel vale qualche punto il campo era
+  stato spostato correttamente e la verifica falliva lo stesso. Ora misura
+  dove il puntatore è arrivato davvero.
+- Un dialogo lasciato aperto poteva fermare tutta la suite, e una suite ferma
+  teneva la macchina occupata finché la piattaforma si arrengeva dopo sei ore.
+  Ora un dialogo che nessuno chiude viene chiuso dopo qualche secondo e ogni
+  verifica ha un tempo massimo: una verifica bloccata fallisce in minuti e
+  dice quale è stata.
+- Taglia e Incolla su un elemento che non li accetta sollevavano un errore
+  interno invece di dirlo: il messaggio era costruito con una parola diversa
+  dal suo segnaposto. Ora ogni messaggio con un valore dentro viene confrontato
+  con i suoi segnaposto.
+- «Terze parti» apriva davvero il browser e su una macchina senza browser la
+  chiamata non tornava mai: la verifica che preme ogni voce di menu registra
+  l'indirizzo invece di aprirlo.

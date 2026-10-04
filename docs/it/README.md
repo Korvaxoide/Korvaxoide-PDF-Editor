@@ -11,7 +11,7 @@ Nessun documento lascia il computer: il programma non usa la rete.
 ![Python](https://img.shields.io/badge/python-3.12%2B-3776ab)
 ![Qt](https://img.shields.io/badge/Qt-6-41cd52)
 ![Licenza](https://img.shields.io/badge/licenza-AGPL--3.0-8b5cf6)
-![Test](https://img.shields.io/badge/test-722%20superati-4c1.svg)
+![Test](https://img.shields.io/badge/test-769%20superati-4c1.svg)
 
 ---
 
@@ -479,7 +479,7 @@ Le regole seguite:
 ## Verifiche
 
 ```bash
-./venv/bin/python -m pytest tests/ -q     # 722 test
+./venv/bin/python -m pytest tests/ -q     # 769 test
 ./venv/bin/python tests/integration.py    # 80 verifiche di integrazione
 ./venv/bin/python tests/finale.py         # 46 verifiche di collaudo
 ./venv/bin/python tests/visual.py         # catture dell'interfaccia
