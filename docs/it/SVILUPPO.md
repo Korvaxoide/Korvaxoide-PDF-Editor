@@ -478,9 +478,11 @@ posizione, unendo i blocchi della stessa riga.
    Windows, dalla versione del pacchetto macOS e dalla finestra Informazioni.
    Il formato è `MAJOR.MINOR.PATCH` e un controllo lo verifica.
 3. Aggiornare il conteggio dei test nel README.
-4. Icone: `./venv/bin/python tools/make_icons.py`
+4. Icone: `./venv/bin/python -m tools.make_icons`
 5. Linux: `./build_linux.sh --onedir` (AppImage con `appimagetool`)
-6. Windows: `.\build_windows.ps1 -OneDir`
+6. Windows: `.\build_windows.ps1`, che dà un file singolo. `-OneDir` dà invece la
+   cartella portatile: pubblicala solo se è quello che vuoi, perché non è ciò
+   che scarica la gente.
 7. Aggiornare l'elenco delle licenze in `THIRD-PARTY.md`.
 8. Commit con un messaggio che spieghi la causa, non solo il sintomo.
 9. Tag git con la versione: `git tag -a v0.1.0 -m "Korvaxoide PDF Editor 0.1.0"`.

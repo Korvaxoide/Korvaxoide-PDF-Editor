@@ -24,12 +24,10 @@ Nessun documento lascia il computer: il programma non usa la rete.
 5. [Scorciatoie da tastiera](#scorciatoie-da-tastiera)
 6. [Dove finiscono i dati](#dove-finiscono-i-dati)
 7. [Programmi esterni opzionali](#programmi-esterni-opzionali)
-8. [Compilare da sorgente](#compilare-da-sorgente)
-9. [Creare un eseguibile](#creare-un-eseguibile)
-10. [Come è fatto il codice](#come-è-fatto-il-codice)
-11. [Verifiche](#verifiche)
-12. [Documentazione ulteriore](#documentazione-ulteriore)
-13. [Licenza](#licenza)
+8. [Come è fatto il codice](#come-è-fatto-il-codice)
+9. [Verifiche](#verifiche)
+10. [Documentazione ulteriore](#documentazione-ulteriore)
+11. [Licenza](#licenza)
 
 ---
 
@@ -61,13 +59,59 @@ Le caratteristiche che lo distinguono:
 
 ## Installazione
 
-Serve **Python 3.12 o successivo** su entrambi i sistemi: è il requisito di
-NumPy, e senza non si possono installare le dipendenze.
+Tre modi per avviarlo, nell'ordine in cui li cerca la maggior parte delle
+persone. Se il primo funziona, nel resto di questo README non serve altro.
 
-### Linux (Ubuntu)
+### Scaricare l'eseguibile già pronto
 
-Nessun `sudo`, nessuna modifica al sistema: tutto va in `venv/`, dentro la
-cartella del progetto.
+Vai alla [pagina delle release](https://github.com/Korvaxoide/Korvaxoide-PDF-Editor/releases/latest)
+e scarica il file del tuo sistema. Non c'è nulla da installare: il download è
+un file solo che porta dentro Python e le librerie.
+
+**Windows.** Il file si chiama `KorvaxoidePDF-<versione>.exe`, dove `<versione>`
+è il numero nel titolo della release. Fai doppio clic e il programma parte.
+Nessun installer, nessuna cartella, nient'altro da tenere accanto.
+
+> **L'eseguibile non è firmato.** Su Windows 11 con Smart App Control attivo
+> Windows avvisa che l'applicazione non è riconosciuta e offre *Ulteriori
+> informazioni*. È il comportamento previsto: il progetto non ha un
+> certificato di firma del codice, quindi l'avviso riguarda la firma che
+> manca e non il programma. Scegli *Esegui comunque*. L'avviso è lo stesso che
+> Windows mostra per qualunque programma non firmato.
+
+**Linux.** Il file si chiama `KorvaxoidePDF-<versione>-x86_64.AppImage`:
+
+```bash
+chmod +x KorvaxoidePDF-<versione>-x86_64.AppImage
+./KorvaxoidePDF-<versione>-x86_64.AppImage
+```
+
+`chmod +x` serve perché il permesso di esecuzione non sopravvive al download.
+Nessuna installazione, nessun `sudo`, nessun Python.
+
+Entrambi i file portano nel nome la versione, quindi i nomi da cercare sono
+quelli elencati nella pagina delle release. Ogni release ha anche il link
+*Source code*, che è il sorgente esatto di quel binario.
+
+### Avviare dalla sorgente
+
+Serve **Python 3.12 o successivo**: è il requisito di NumPy, e senza non si
+possono installare le dipendenze.
+
+Dipendenze (`requirements.txt`):
+
+| Pacchetto | A cosa serve |
+| --- | --- |
+| PySide6 ≥ 6.11 | Interfaccia (Qt 6) |
+| PyMuPDF ≥ 1.28 | Motore PDF |
+| Pillow, NumPy | Immagini |
+| cryptography, asn1crypto | Firma digitale |
+
+Opzionale: **scipy** (BSD-3-Clause); se è installato migliora la rimozione dello
+sfondo per le firme. Il programma funziona anche senza.
+
+**Linux (Ubuntu).** Nessun `sudo`, nessuna modifica al sistema: tutto va in
+`venv/`, dentro la cartella del progetto.
 
 ```bash
 sudo apt install python3-venv      # solo se "python3 -m venv" non funziona
@@ -92,23 +136,13 @@ costruire: installa `python3.12` e `python3.12-venv`, poi usa
 Non c'è uno script d'installazione. Avviare dalla sorgente è il modo
 supportato, e questo significa niente voce nel menu delle applicazioni e
 niente icone in `~/.local/share/icons/`. Se le vuoi, i pezzi sono ancora nel
-repository: `venv/bin/python tools/make_icons.py` scrive
-`resources/icons/`, e `resources/korvaxoide-pdf-editor.desktop` è una voce di menu
-già pronta che punta a `run.sh`.
+repository: `venv/bin/python -m tools.make_icons` scrive `resources/icons/`, e
+`resources/korvaxoide-pdf-editor.desktop` è una voce di menu già pronta che
+punta a `run.sh`.
 
-Il programma cerca i suoi programmi esterni anche in `~/.local/bin`: se
-installi `tesseract` lì viene trovato senza configurare niente.
-
-In alternativa si scarica l'AppImage e la si rende eseguibile:
-`chmod +x KorvaxoidePDF-<versione>-x86_64.AppImage`. Non richiede Python.
-
-### Windows
-
-Serve Python 3.12 o successivo, installato dall'[installer
+**Windows.** Serve Python 3.12 o successivo, installato dall'[installer
 ufficiale](https://www.python.org/downloads/windows/) con l'opzione **Add
-python.exe to PATH** spuntata.
-
-Estrarre la cartella e:
+python.exe to PATH** spuntata. Estrarre la cartella e:
 
 ```bat
 run.bat
@@ -134,8 +168,38 @@ di lavoro la radice del progetto: `pythonw` non apre la console. Per aprivi
 i PDF con un doppio clic va registrato
 `HKCU\Software\Classes\Applications\pythonw.exe\shell\open\command`.
 
-In alternativa si usa l'eseguibile compilato (`dist\KorvaxoidePDF.exe`): è un
-file solo e non ha bisogno di Python.
+Il programma cerca i suoi programmi esterni anche in `~/.local/bin`: se
+installi `tesseract` lì viene trovato senza configurare niente. Vedi
+[Programmi esterni opzionali](#programmi-esterni-opzionali).
+
+### Compilare un binario da soli
+
+**Linux** (cartella singola e AppImage):
+
+```bash
+./build_linux.sh --onedir      # dist/KorvaxoidePDF/KorvaxoidePDF
+./build_linux.sh               # anche AppImage (serve appimagetool)
+```
+
+**Windows** (PowerShell):
+
+```powershell
+.\build_windows.ps1            # dist\KorvaxoidePDF.exe, file singolo
+.\build_windows.ps1 -OneDir    # cartella dist\KorvaxoidePDF\, portatile
+```
+
+Le icone non sono nel repository, sono disegnate: entrambi gli script le
+generano prima di chiamare PyInstaller. Da sole:
+
+```bash
+./venv/bin/python -m tools.make_icons
+```
+
+Su Linux di default esce una cartella, perché l'AppImage si costruisce
+impacchettando quella cartella; su Windows di default esce un file singolo,
+che non ha bisogno di installer né di nulla accanto. La variabile
+`KorvaxoidePDF_ONEDIR=1` o `=0` sceglie la struttura a mano su entrambi i
+sistemi.
 
 ---
 
@@ -389,49 +453,6 @@ Tesseract si può installare anche senza root, nella cartella dell'utente:
 
 ---
 
-## Compilare da sorgente
-
-Serve Python 3.12 o successivo.
-
-```bash
-python3 -m venv venv
-./venv/bin/pip install -r requirements.txt
-./venv/bin/python -m pdfeditor
-```
-
-Dipendenze (`requirements.txt`):
-
-| Pacchetto | Perché |
-| --- | --- |
-| PySide6 ≥ 6.11 | Interfaccia (Qt 6) |
-| PyMuPDF ≥ 1.28 | Motore PDF |
-| Pillow, NumPy | Immagini |
-| cryptography, asn1crypto | Firma digitale |
-
-Facoltativa: **scipy** (BSD-3-Clause), se installata migliora la rimozione
-dello sfondo delle firme; il programma funziona anche senza.
-
----
-
-## Creare un eseguibile
-
-**Linux** (cartella unica e AppImage):
-
-```bash
-./build_linux.sh --onedir      # dist/KorvaxoidePDF/KorvaxoidePDF
-./build_linux.sh               # anche AppImage (richiede appimagetool)
-```
-
-**Windows** (PowerShell):
-
-```powershell
-.\build_windows.ps1 -OneDir
-```
-
-L'icona si rigenera con `./venv/bin/python tools/make_icons.py`.
-
----
-
 ## Come è fatto il codice
 
 ```
@@ -531,13 +552,14 @@ il programma sono tutti consentiti. L'unico obbligo è che **chi riceve il
 programma riceva anche il sorgente** della stessa versione.
 
 Qui l'obbligo è già soddisfatto: il codice di ogni versione pubblicata è
-questo repository, e ogni rilascio su GitHub porta il tag corrispondente.
-Chi scarica `KorvaxoidePDF-0.1.0-x86_64.AppImage` trova il sorgente di quel
-binario con un clic su *Source code* nella pagina della release, oppure con:
+questo repository, e ogni rilascio su GitHub porta il tag corrispondente. Chi
+scarica un binario trova il sorgente di quel file esatto con un clic su
+*Source code* nella [pagina delle release](https://github.com/Korvaxoide/Korvaxoide-PDF-Editor/releases),
+oppure con:
 
 ```bash
 git clone https://github.com/Korvaxoide/Korvaxoide-PDF-Editor.git
-git checkout 0.1.0
+git checkout v0.1.1
 ```
 
 Korvaxoide PDF Editor non dà nessuna garanzia: è fornito «così com'è».

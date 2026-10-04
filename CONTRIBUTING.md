@@ -483,7 +483,9 @@ position, joining the blocks of the same line.
 3. Update the test count in the README.
 4. Icons: `./venv/bin/python -m tools.make_icons`
 5. Linux: `./build_linux.sh --onedir` (AppImage with `appimagetool`)
-6. Windows: `.\build_windows.ps1 -OneDir`
+6. Windows: `.\build_windows.ps1`, which gives a single file. `-OneDir` gives the
+   portable folder instead: publish that only if you mean to, because it is not
+   what people download.
 7. Update the licences list in `THIRD-PARTY.md`.
 8. Update `CHANGELOG.md` with what changed in this version.
 9. Commit with a message that explains the cause, not only the symptom.

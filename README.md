@@ -25,12 +25,10 @@ No document ever leaves your computer: the program does not use the network.
 5. [Keyboard shortcuts](#keyboard-shortcuts)
 6. [Where the data lives](#where-the-data-lives)
 7. [Optional external programs](#optional-external-programs)
-8. [Building from source](#building-from-source)
-9. [Creating a binary](#creating-a-binary)
-10. [How the code is laid out](#how-the-code-is-laid-out)
-11. [Tests](#tests)
-12. [Further documentation](#further-documentation)
-13. [License](#license)
+8. [How the code is laid out](#how-the-code-is-laid-out)
+9. [Tests](#tests)
+10. [Further documentation](#further-documentation)
+11. [License](#license)
 
 ---
 
@@ -63,13 +61,58 @@ What sets it apart:
 
 ## Installation
 
-**Python 3.12 or later** is required on both systems: it is NumPy's
-requirement, and without it the dependencies cannot be installed.
+Three ways to run it, in the order most people want them. Nothing else in this
+README is needed if the first one works for you.
 
-### Linux (Ubuntu)
+### Downloading a ready-made binary
 
-No `sudo`, no change to the system: everything goes into `venv/` inside the
-project directory.
+Go to the [releases page](https://github.com/Korvaxoide/Korvaxoide-PDF-Editor/releases/latest)
+and download the file for your system. There is nothing to install: the download
+is one file that carries Python and the libraries inside it.
+
+**Windows.** The file is named `KorvaxoidePDF-<version>.exe`, where `<version>`
+is the number in the release title. Double-click it and the program starts. No
+installer, no folder, nothing else to keep next to it.
+
+> **The executable is not signed.** On Windows 11 with Smart App Control
+> enabled, Windows warns that the app is unrecognised and offers *More info*.
+> That is expected: the project has no code signing certificate, so the warning
+> is about the missing signature and not about the program. Choose *Run anyway*.
+> The warning is the same one Windows shows for any unsigned program.
+
+**Linux.** The file is named `KorvaxoidePDF-<version>-x86_64.AppImage`:
+
+```bash
+chmod +x KorvaxoidePDF-<version>-x86_64.AppImage
+./KorvaxoidePDF-<version>-x86_64.AppImage
+```
+
+`chmod +x` is needed because the executable bit is not preserved by the
+download. No installation, no `sudo`, no Python.
+
+Both files are named after the version they carry, so the names on the releases
+page are always the ones to look for. Every release also links *Source code*,
+which is the matching source of that exact binary.
+
+### Running from source
+
+**Python 3.12 or later** is required: it is NumPy's requirement, and without it
+the dependencies cannot be installed.
+
+Dependencies (`requirements.txt`):
+
+| Package | Why |
+| --- | --- |
+| PySide6 ≥ 6.11 | Interface (Qt 6) |
+| PyMuPDF ≥ 1.28 | PDF engine |
+| Pillow, NumPy | Images |
+| cryptography, asn1crypto | Digital signatures |
+
+Optional: **scipy** (BSD-3-Clause); when installed it improves background
+removal for signatures. The program works without it.
+
+**Linux (Ubuntu).** No `sudo`, no change to the system: everything goes into
+`venv/` inside the project directory.
 
 ```bash
 sudo apt install python3-venv      # only if "python3 -m venv" does not work
@@ -91,26 +134,16 @@ built: install `python3.12` and `python3.12-venv`, then use
 
 **To uninstall:** delete `venv/` and the project directory.
 
-There is no installer script. Running from the source is the supported way, and
-that means no application-menu entry and no icons in `~/.local/share/icons/`.
-If you want them, the pieces are still in the repository:
-`venv/bin/python tools/make_icons.py` writes `resources/icons/`, and
-`resources/korvaxoide-pdf-editor.desktop` is a ready-made menu entry pointing at
-`run.sh`.
+There is no installation script. Running from the source is the supported way,
+and that means no application-menu entry and no icons in
+`~/.local/share/icons/`. If you want them, the pieces are still in the
+repository: `venv/bin/python -m tools.make_icons` writes `resources/icons/`, and
+`resources/korvaxoide-pdf-editor.desktop` is a ready-made menu entry pointing
+at `run.sh`.
 
-The program also looks for its external programs in `~/.local/bin`: put
-`tesseract` there and it is found without configuring anything.
-
-Alternatively download the AppImage and make it executable:
-`chmod +x KorvaxoidePDF-<version>-x86_64.AppImage`. It needs no Python at all.
-
-### Windows
-
-Python 3.12 or later, installed from the
+**Windows.** Python 3.12 or later, installed from the
 [official installer](https://www.python.org/downloads/windows/) with the
-**Add python.exe to PATH** option ticked.
-
-Extract the folder and:
+**Add python.exe to PATH** option ticked. Extract the folder and:
 
 ```bat
 run.bat
@@ -136,8 +169,37 @@ as working directory: `pythonw` does not open a console window. To open PDFs
 with a double click, register
 `HKCU\Software\Classes\Applications\pythonw.exe\shell\open\command`.
 
-Alternatively use the compiled binary (`dist\KorvaxoidePDF.exe`): it is a single
-file and needs no Python.
+The program also looks for its external programs in `~/.local/bin`: put
+`tesseract` there and it is found without configuring anything. See
+[Optional external programs](#optional-external-programs).
+
+### Building a binary yourself
+
+**Linux** (single folder and AppImage):
+
+```bash
+./build_linux.sh --onedir      # dist/KorvaxoidePDF/KorvaxoidePDF
+./build_linux.sh               # also an AppImage (needs appimagetool)
+```
+
+**Windows** (PowerShell):
+
+```powershell
+.\build_windows.ps1            # dist\KorvaxoidePDF.exe, a single file
+.\build_windows.ps1 -OneDir    # dist\KorvaxoidePDF\ folder, portable
+```
+
+The icons are not in the repository, they are drawn: both scripts generate them
+before invoking PyInstaller. On its own:
+
+```bash
+./venv/bin/python -m tools.make_icons
+```
+
+Linux produces a folder by default, because the AppImage is built by packing
+that folder; Windows produces a single file, which needs no installer and
+nothing beside it. Set `KorvaxoidePDF_ONEDIR=1` or `=0` to choose the layout by
+hand on either system.
 
 ---
 
@@ -402,54 +464,6 @@ enough.
 
 ---
 
-## Building from source
-
-Python 3.12 or later is required.
-
-```bash
-python3 -m venv venv
-./venv/bin/pip install -r requirements.txt
-./venv/bin/python -m pdfeditor
-```
-
-Dependencies (`requirements.txt`):
-
-| Package | Why |
-| --- | --- |
-| PySide6 ≥ 6.11 | Interface (Qt 6) |
-| PyMuPDF ≥ 1.28 | PDF engine |
-| Pillow, NumPy | Images |
-| cryptography, asn1crypto | Digital signatures |
-
-Optional: **scipy** (BSD-3-Clause); when installed it improves background
-removal for signatures. The program works without it.
-
----
-
-## Creating a binary
-
-**Linux** (single folder and AppImage):
-
-```bash
-./build_linux.sh --onedir      # dist/KorvaxoidePDF/KorvaxoidePDF
-./build_linux.sh               # also an AppImage (needs appimagetool)
-```
-
-**Windows** (PowerShell):
-
-```powershell
-.\build_windows.ps1 -OneDir
-```
-
-The icons are not in the repository, they are drawn: both scripts generate them
-before invoking PyInstaller. On its own:
-
-```bash
-./venv/bin/python -m tools.make_icons
-```
-
----
-
 ## How the code is laid out
 
 ```
@@ -549,13 +563,14 @@ the program are all permitted. The only obligation is that **whoever receives
 the program also receives the source** of the same version.
 
 That obligation is already met here: the code of every published version is
-this repository, and every release on GitHub carries the matching tag.
-Whoever downloads `KorvaxoidePDF-0.1.0-x86_64.AppImage` finds the source of that
-binary with one click on *Source code* on the release page, or with:
+this repository, and every release on GitHub carries the matching tag. Whoever
+downloads a binary finds the source of that exact file with one click on
+*Source code* on the [releases page](https://github.com/Korvaxoide/Korvaxoide-PDF-Editor/releases),
+or with:
 
 ```bash
 git clone https://github.com/Korvaxoide/Korvaxoide-PDF-Editor.git
-git checkout 0.1.0
+git checkout v0.1.1
 ```
 
 Korvaxoide PDF Editor comes with no warranty: it is provided "as is".
