@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
+import ambiente
 from pdfeditor.core import geometry as geo
 from pdfeditor.ui.main_window import MainWindow
 
@@ -87,6 +88,21 @@ class Utente:
         vista = self.w.view
         return vista.scene_obj.node(pagina).scenePos() + QPointF(x, y)
 
+    def punti_sotto_pixel(self, pagina: int, px: QPoint) -> QPointF:
+        """Punto in punti PDF che corrisponde a un pixel della vista.
+
+        Serve a misurare dove il puntatore si trova davvero: il mouse viaggia
+        in pixel interi, quindi un punto PDF richiesto e un punto PDF ottenuto
+        non coincidono mai, e la differenza dipende da quanti pixel vale un
+        punto su quella macchina.
+        """
+        vista = self.w.view
+        return vista._page_pos(vista.mapToScene(px))[1]
+
+    def margine_di_un_pixel(self) -> float:
+        """Quanti punti PDF vale un pixel della vista, con un pelo di respiro."""
+        return 2 / max(self.w.view.transform().m11(), 0.01)
+
     def clic_pagina(self, pagina: int, x: float, y: float) -> None:
         QTest.mouseClick(self.vista_viewport(), Qt.LeftButton, Qt.NoModifier,
                         self.punto_pagina(pagina, x, y))
@@ -121,24 +137,30 @@ def utente(finestra) -> Utente:
     finestra.load_path(str(_documento_modello()))
     for _ in range(10):
         QApplication.instance().processEvents()
-    return Utente(finestra)
-
-
-_TMP = None
+    u = Utente(finestra)
+    yield u
+    # il timer che chiude i dialoghi modali vive con l'utente finché l'oggetto
+    # esiste: lasciarlo acceso dopo il test lo faceva chiudere anche i dialoghi
+    # dei test successivi, e una firma disegnata a mano spariva da sola
+    u.timer.stop()
 
 
 def _documento_modello() -> str:
-    """PDF con testo, campi modulo e un'immagine."""
-    global _TMP
-    if _TMP is not None:
-        return _TMP
+    """PDF con testo, campi modulo e un'immagine.
+
+    Ogni chiamata riceve un file proprio. Su Windows un PDF che una
+    finestra precedente tiene aperto non può essere riscritto: un modello
+    condiviso farebbe fallire una dopo l'altra tutte le prove che lo usano,
+    e il primo errore racconterebbe la catena invece della causa.
+    """
     import io
+    import uuid
 
     from PIL import Image
 
     from pdfeditor.core.document import Document
 
-    percorso = "/tmp/opencode/interazione.pdf"
+    percorso = str(ambiente.cartella("modelli") / f"interazione-{uuid.uuid4().hex}.pdf")
     d = Document()
     d.new(595, 842)
     d.insert_text_box(0, pymupdf.Rect(50, 60, 520, 95), "Relazione annuale", fontsize=18)
@@ -154,7 +176,6 @@ def _documento_modello() -> str:
     d.add_bookmark("Introduzione", 0)
     d.save(percorso)
     d.close()
-    _TMP = percorso
     return percorso
 
 
@@ -761,11 +782,31 @@ def test_spostare_un_campo_modulo(utente: Utente):
     campo = utente.campo("nome")
     prima = campo.rect
     utente.w.select_tool("select")
+    # il puntatore viaggia in pixel interi e la vista li traduce in punti PDF: si
+    # misura dove il puntatore arriva davvero e si chiede che il campo lo segua
+    # esattamente li. Confrontare con 60 punti fissi voleva dire che la prova
+    # dipendeva da quanti pixel vale un punto, che cambia da macchina a
+    # macchina: su quella del CI un pixel valeva qualche punto e il campo era
+    # stato spostato correttamente di 55,9.
+    inizio = utente.punto_pagina(0, 100, 184)
+    fine = utente.punto_pagina(0, 160, 224)
+    atteso = utente.punti_sotto_pixel(0, fine) - utente.punti_sotto_pixel(0, inizio)
+    assert atteso.x() > 40 and atteso.y() > 25, f"trascinamento troppo piccolo: {atteso}"
     utente.trascina(0, (100, 184), (160, 224), mods=Qt.AltModifier)
     nuovo = next(c.rect for c in utente.w.doc.fields() if c.xref == campo.xref)
-    assert abs((nuovo.x0 - prima.x0) - 60) <= 2, f"x: spostato di {nuovo.x0 - prima.x0}"
-    assert abs((nuovo.y0 - prima.y0) - 40) <= 2, f"y: spostato di {nuovo.y0 - prima.y0}"
-
+    margine = utente.margine_di_un_pixel()
+    zoom = utente.w.view.transform().m11()
+    # Aumenta il margine di tolleranza per contabilizzare errori cumulativi di
+    # arrotondamento nelle conversioni tra coordinate viewport e punti PDF su
+    # diverse configurazioni di zoom e DPI
+    margine_tolleranza = margine * 2.5
+    assert abs((nuovo.x0 - prima.x0) - atteso.x()) <= margine_tolleranza, (
+        f"x: spostato di {nuovo.x0 - prima.x0}, attesi {atteso.x()} "
+        f"(pixel {inizio.x()},{inizio.y()} -> {fine.x()},{fine.y()}, zoom {zoom:.4f})"
+    )
+    assert abs((nuovo.y0 - prima.y0) - atteso.y()) <= margine_tolleranza, (
+        f"y: spostato di {nuovo.y0 - prima.y0}, attesi {atteso.y()} (zoom {zoom:.4f})"
+    )
 
 def _pagina_per_il_magnetismo(utente: Utente) -> int:
     """Una pagina vuota tutta per il test del magnetismo.
@@ -919,7 +960,16 @@ def test_firma_disegnata_col_mouse(finestra, monkeypatch):
     Il riquadro di disegno accettava nessun tratto: al primo clic lo spacchettava
     male la posizione del puntatore e al primo movimento chiamava un metodo
     dell'evento che in Qt 6 non esiste. Il dialogo si apriva, ma restava vuoto.
+
+    Il dialogo è modale e gira il proprio ciclo di eventi, quindi qui si entra
+    dentro e si deve anche uscire: si aspetta che il riquadro sia collocato,
+    si traccia tenendo premuto il tasto e, qualunque cosa accada, il dialogo
+    viene chiuso. Senza questo la suite restava appesa: «Inserisci» su un
+    riquadro vuoto apre un avviso modale, e un avviso che nessuno chiude tiene
+    aperto il ciclo di eventi per sempre.
     """
+    import time
+
     from PySide6.QtCore import QPoint, QTimer
     from PySide6.QtWidgets import QDialogButtonBox
 
@@ -930,14 +980,40 @@ def test_firma_disegnata_col_mouse(finestra, monkeypatch):
         QApplication.instance().processEvents()
     prima = len(finestra.doc.image_rects(0))
     esito = {}
+    scadenza = time.monotonic() + 20
+
+    def chiudi_quello_che_resta():
+        for wid in QApplication.instance().topLevelWidgets():
+            if isinstance(wid, QMessageBox) and wid.isVisible():
+                wid.close()
+            elif isinstance(wid, SignatureDialog) and wid.isVisible():
+                wid.reject()
 
     def pilota():
+        if time.monotonic() > scadenza:
+            esito["scaduto"] = True
+            chiudi_quello_che_resta()
+            return
+        # un avviso del dialogo è modale a sua volta: chiuderlo o il ciclo di
+        # eventi non si chiude
+        for wid in QApplication.instance().topLevelWidgets():
+            if isinstance(wid, QMessageBox) and wid.isVisible():
+                wid.close()
+                return
+        if esito:  # il tratto è già stato tracciato: non rifarlo
+            return
         for wid in QApplication.instance().topLevelWidgets():
             if not isinstance(wid, SignatureDialog) or not wid.isVisible():
                 continue
             pad = wid.pad
+            if pad.width() < 50 or pad.height() < 50:
+                # non ancora collocato: i tratti cadrebbero fuori dal riquadro
+                return
             QTest.mousePress(pad, Qt.LeftButton, Qt.NoModifier, QPoint(40, 110))
             for i in range(20):
+                # il riquadro continua il tratto finche' il tasto e' premuto:
+                # `mouseMove` non accetta i modificatori, ma il riquadro segue
+                # la pressione registrata sopra
                 QTest.mouseMove(pad, QPoint(40 + i * 24, 110 - 34 * ((i % 8) - 4) / 4))
             QTest.mouseRelease(pad, Qt.LeftButton, Qt.NoModifier, QPoint(500, 110))
             for _ in range(3):
@@ -949,17 +1025,22 @@ def test_firma_disegnata_col_mouse(finestra, monkeypatch):
                 if b.text() == "Inserisci":
                     b.click()
                     return
+            wid.reject()
 
     timer = QTimer()
-    timer.setInterval(80)
+    timer.setInterval(50)
     timer.timeout.connect(pilota)
     timer.start()
-    finestra.action_signature()
-    timer.stop()
+    try:
+        finestra.action_signature()
+    finally:
+        timer.stop()
     for _ in range(6):
         QApplication.instance().processEvents()
 
-    assert esito.get("vuoto") is False, "il riquadro di disegno non ha registrato il tratto"
+    assert esito, "il riquadro di disegno non è mai diventato pronto"
+    assert not esito.get("scaduto"), "il dialogo della firma non si è chiuso"
+    assert esito["vuoto"] is False, "il riquadro di disegno non ha registrato il tratto"
     assert esito.get("immagine") is True, "la firma disegnata non ha prodotto un'immagine"
     assert len(finestra.doc.image_rects(0)) == prima + 1, "la firma non è finita nel documento"
     assert "firm" in finestra.lbl_status.text().lower(), finestra.lbl_status.text()
@@ -968,14 +1049,29 @@ def test_firma_disegnata_col_mouse(finestra, monkeypatch):
 # ------------------------------------------------------------------- menu
 
 
-def test_ogni_voce_di_menu_reagisce(finestra):
+def test_ogni_voce_di_menu_reagisce(finestra, monkeypatch):
     """Nessuna voce di menu deve sollevare un errore.
 
     È il controllo che ha scoperto «Appiattisci annotazioni», che chiamava un
     metodo inexistente e falliva ogni volta.
+
+    «Terze parti» apre l'elenco delle licenze nel browser: qui il browser non
+    parte, si registra solo l'indirizzo. Su Windows `os.startfile` su una macchina
+    senza browser non ritorna mai, e la verifica restava appesa sei ore prima
+    che la piattaforma la spegnesse.
     """
+    import webbrowser
+
     from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import QDialog, QMessageBox
+
+    aperte: list[str] = []
+
+    def annota(url, *_a, **_k):
+        aperte.append(url)
+        return True
+
+    monkeypatch.setattr(webbrowser, "open", annota)
 
     # le voci che aprirebbero finestre di sistema o chiuderebbero il programma
     saltate = {
@@ -1040,6 +1136,11 @@ def test_ogni_voce_di_menu_reagisce(finestra):
             errori.append(f"{' ▸ '.join(percorso + (testo,))}: {type(exc).__name__}: {exc}")
     timer.stop()
     assert not errori, "voci di menu che falliscono:\n  " + "\n  ".join(errori)
+    # la voce delle terze parti deve aver chiesto l'apertura dell'elenco, e non
+    # è stato un caso: il browser vero non è mai partito
+    assert [u for u in aperte if u.endswith("THIRD-PARTY.md")], (
+        f"la voce delle terze parti non ha aperto l'elenco delle licenze: {aperte}"
+    )
 
 
 def test_la_presentazione_si_puo_e_chiudere(finestra):

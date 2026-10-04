@@ -9,6 +9,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +17,7 @@ import pymupdf
 import pytest
 from PIL import Image, ImageDraw
 
+import ambiente
 from pdfeditor.core import geometry as geo
 from pdfeditor.core.document import Document, DocumentError
 
@@ -622,10 +624,11 @@ def test_il_controllo_delle_lettere_applica_la_soglia():
     Il confronto usava ``min`` invece di ``max`` e valeva sempre vero: il
     controllo si riduceva a «almeno metà» e un font con poche lettere passava.
     """
-    import pathlib
     from pdfeditor.signature import typed
 
-    font = str(sorted(pathlib.Path("/usr/share/fonts").rglob("*.ttf"))[0])
+    font = ambiente.font_serif()
+    if not font:
+        pytest.skip("nessun font sul computer")
     richieste = typed.LETTERE_FIRMA
     assert typed.ha_lettere(font, richieste, minimo=40)
     # un font che non ha nulla di quanto richiesto deve essere rifiutato
@@ -714,10 +717,19 @@ def test_ocr_non_modifica_il_documento_se_non_riconosce_nulla(monkeypatch):
     from pdfeditor.ui import ocr
 
     doc = _doc()
-    monkeypatch.setattr(ocr, "find_tesseract", lambda: "/bin/true")
+    monkeypatch.setattr(ocr, "find_tesseract", lambda: "tesseract")
     monkeypatch.setattr(ocr, "languages", lambda: ["ita"])
     monkeypatch.setattr(ocr, "extract_page_image", lambda *a, **k: b"", raising=False)
     monkeypatch.setattr(doc, "extract_page_image", lambda *a, **k: b"")
+    # il tesseract che non riconosce niente: esce senza errori e non lascia
+    # nessun TSV. Il percorso dell'eseguibile non conta, e non si può fingere
+    # con «/bin/true»: su Windows quel file non esiste e la prova moriva con
+    # un FileNotFoundError invece di verificare la rimozione del testo
+    monkeypatch.setattr(
+        ocr.subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(args=[], returncode=0),
+    )
     ok, _msg = ocr.run_ocr(doc, "ita", 150, [0])
     assert ok is False
     assert not doc.dirty, "un OCR senza risultati non deve sporcare il documento"

@@ -12,6 +12,63 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ---
 
+## Non pubblicato
+
+### Corretti
+
+- Su Windows il salvataggio non scriveva niente. MuPDF tiene aperto il file da
+  cui ha aperto il documento, e Windows non permette di sostituire un file
+  aperto: la sostituzione rispondeva sempre «Access is denied» e il
+  contenuto nuovo non arrivava mai sul disco. Quando il file non si può
+  sostituire il contenuto ci viene scritto dentro, dopo qualche tentativo: il
+  file resta valido e le letture successive sono quelle del documento appena
+  riscritto. Un file che un altro programma tiene bloccato viene ora
+  dichiarato tale, invece di essere dato per salvato.
+
+### Verifiche
+
+- La suite girava solo su Linux: leggeva da `/tmp`, cercava i font sotto
+  `/usr/share/fonts`, contava un Ghostscript assente come una funzione assente
+  e costruiva un percorso impossibile con una cartella che non esiste. File
+  temporanei, font e percorsi inutilizzabili vengono ora presi dagli
+  aiutanti di `tests/ambiente.py`, su ogni piattaforma.
+- Le macchine GitHub non installavano ciò che serve alla suite per partire:
+  le librerie di piattaforma di Qt, per cui il Linux falliva all'import, e i
+  font, per cui le verifiche della firma non avevano nulla su cui scrivere.
+- Il controllo della licenza faceva fallire la build quando gnu.org non si
+  raggiungeva. Un download fallito non dice niente del repository: ora viene
+  ritentato e, se il testo non arriva, avvisa e lascia passare. A fermare la
+  build è adesso solo un `LICENSE` cambiato.
+- Cinquanta verifiche di interazione fallivano su Windows prima ancora di un
+  clic: il PDF usato come modello veniva riscritto, nome compreso, mentre una
+  finestra lo teneva aperto, e Windows non permette di riscriverlo. Ogni
+  verifica costruisce adesso il proprio modello.
+- La verifica del ritento quando un file è occupato per un momento saltava su
+  Windows, dove la sostituzione non viene mai tentata: ora la prova apposta, e
+  una seconda verifica copre il ritento della scrittura che Windows usa alla
+  fine.
+- Il timer che chiude i dialoghi di una verifica continuava a girare anche
+  dopo che la verifica era finita, e chiudeva i dialoghi delle successive: una
+  firma disegnata a mano spariva da sola.
+- Una verifica misurava un trascinamento in punti PDF mentre il puntatore
+  viaggia in pixel di schermo: dove un pixel vale qualche punto il campo era
+  stato spostato correttamente e la verifica falliva lo stesso. Ora misura
+  dove il puntatore è arrivato davvero.
+- Un dialogo lasciato aperto poteva fermare tutta la suite, e una suite ferma
+  teneva la macchina occupata finché la piattaforma si arrengeva dopo sei ore.
+  Ora un dialogo che nessuno chiude viene chiuso dopo qualche secondo e ogni
+  verifica ha un tempo massimo: una verifica bloccata fallisce in minuti e
+  dice quale è stata.
+- Taglia e Incolla su un elemento che non li accetta sollevavano un errore
+  interno invece di dirlo: il messaggio era costruito con una parola diversa
+  dal suo segnaposto. Ora ogni messaggio con un valore dentro viene confrontato
+  con i suoi segnaposto.
+- «Terze parti» apriva davvero il browser e su una macchina senza browser la
+  chiamata non tornava mai: la verifica che preme ogni voce di menu registra
+  l'indirizzo invece di aprirlo.
+
+---
+
 ## 0.1.0 — 2026-10-03
 
 Prima versione numerata. Prima di questa il numero era `1.0.0` di default e

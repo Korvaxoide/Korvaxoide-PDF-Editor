@@ -19,6 +19,8 @@ from __future__ import annotations
 import io
 import os
 import re
+import shutil
+import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -926,13 +928,18 @@ class Document:
         sempre in errore, con o senza modifiche, e la finestra mostrava la
         traduzione di quell'errore invece di scrivere il file.
 
-        Si scrive su un provvisorio e lo si sostituisce, come già si fa per
-        l'esportazione in PDF/A: il contenuto è lo stesso, il file precedente
-        resta intatto se qualcosa va storto e sul disco non resta nessun
-        ricordo del passaggio. Il confronto è fra i percorsi e non chiede che
-        il file esista ancora: MuPDF guarda da quale nome è stato aperto il
-        documento, e se il file è stato cancellato o spostato proprio quel
-        confronto continua a valere.
+        Si scrive su un provvisorio e lo si mette al posto del file, come
+        già si fa per l'esportazione in PDF/A: il contenuto è lo stesso, il
+        file precedente resta intatto se qualcosa va storto e sul disco non
+        resta nessun ricordo del passaggio. Il confronto è fra i percorsi e
+        non chiede che il file esista ancora: MuPDF guarda da quale nome è
+        stato aperto il documento, e se il file è stato cancellato o mosso
+        proprio quel confronto continua a valere.
+
+        Sul file che non si può sostituire, cioè su Windows, dove è aperto
+        perché lo sta leggendo MuPDF, il contenuto viene scritto dentro: il
+        file resta valido e le letture successive tornano, perché sono quelle
+        del documento appena riscritto.
         """
         sullo_stesso = (
             self.path is not None and self.path.resolve() == target.resolve()
@@ -947,7 +954,7 @@ class Document:
             # c'era già, gli si ridanno quelli che aveva
             if target.exists():
                 os.chmod(provvisorio, target.stat().st_mode & 0o7777)
-            provvisorio.replace(target)
+            _sostituisci(provvisorio, target)
         finally:
             if provvisorio.exists():
                 provvisorio.unlink()
@@ -3440,6 +3447,67 @@ PAGE_NUMBER_TAG = b"ScrNum"
 _NUMBER_BLOCK_RE = re.compile(
     rb"\s*/" + PAGE_NUMBER_TAG + rb"\s+BMC.*?EMC", re.S
 )
+
+#: Quante volte si ritenta un'operazione sul file prima di rinunciarci. Un
+#: antivirus o un programma di sincronizzazione possono tenere il file aperto
+#: per qualche decimo di secondo, e basta un tentativo per accorgersene.
+_TENTATIVI_SU_FILE = 5
+
+#: Se il file da cui il documento e' aperto puo' essere sostituito.
+#:
+#: Su Linux e macOS si', anche aperto. Su Windows no, e non e' un caso sporadico:
+#: MuPDF tiene aperto il file da cui ha aperto il documento per poter salvare
+#: in incrementale, e Windows non permette di sostituire un file aperto. Salvare
+#: sul file stesso da cui il documento era stato aperto finiva quindi sempre con
+#: «Access is denied» e il file non veniva scritto.
+_SOSTITUZIONE_DISPONIBILE = os.name != "nt"
+
+
+def _aspetta(tentativo: int) -> None:
+    """Pausa crescente fra un tentativo e l'altro: un blocco breve passa da solo."""
+    time.sleep(0.05 * (tentativo + 1))
+
+
+def _scrivi_su_file_aperto(provvisorio: Path, target: Path) -> None:
+    """Scrive il contenuto di ``provvisorio`` dentro ``target``.
+
+    È la via quando il file non si può sostituire. L'handle con cui MuPDF
+    tiene aperto ``target`` resta valido: il contenuto e le posizioni degli
+    oggetti sono quelli del documento appena riscritto, quindi anche le
+    letture successive tornano. Il file resta quello di prima, con il suo
+    nome e la sua identità, che è ciò che ci si aspetta da un salvataggio.
+    """
+    shutil.copyfile(provvisorio, target)
+
+
+def _sostituisci(provvisorio: Path, target: Path) -> None:
+    """Mette ``provvisorio`` al posto di ``target``, o ci scrive dentro.
+
+    Prima si sostituisce, che è l'operazione che non lascia mai il file a
+    metà. Se il file è aperto non si può sostituire: si aspetta qualche
+    decimo di secondo, si riprova, e poi si scrive dentro. L'ultimo errore
+    non viene tacito, perché un file che sembra salvato e che invece è
+    quello di prima è peggio di un salvataggio dichiarato fallito.
+    """
+    if _SOSTITUZIONE_DISPONIBILE:
+        for tentativo in range(_TENTATIVI_SU_FILE):
+            try:
+                provvisorio.replace(target)
+                return
+            except PermissionError:
+                if tentativo + 1 < _TENTATIVI_SU_FILE:
+                    _aspetta(tentativo)
+    for tentativo in range(_TENTATIVI_SU_FILE):
+        try:
+            _scrivi_su_file_aperto(provvisorio, target)
+            return
+        except PermissionError:
+            if tentativo + 1 < _TENTATIVI_SU_FILE:
+                _aspetta(tentativo)
+    raise DocumentError(
+        "il file è aperto da un altro programma e non può essere scritto: "
+        "chiudilo e riprova, oppure usa «Salva come…»"
+    )
 
 
 def _escape_pdf_string(text: str) -> bytes:

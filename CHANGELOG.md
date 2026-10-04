@@ -12,6 +12,60 @@ the *About* window all read it from there.
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- Saving on Windows wrote nothing. MuPDF keeps open the file it opened the
+  document from, and Windows does not allow an open file to be replaced, so the
+  substitution always answered «Access is denied» and the new content was
+  never written. When the file cannot be replaced the content is now written
+  into it, after a few attempts: the file on disk stays valid and the reads
+  that follow are the ones of the document just rewritten. A file that stays
+  blocked by another program is now reported, instead of being passed off as
+  saved.
+
+### Tests
+
+- The suite ran only on Linux: it read from `/tmp`, looked for fonts under
+  `/usr/share/fonts`, counted a missing Ghostscript as a missing feature and
+  built an impossible path out of a directory that does not exist. Temporary
+  files, fonts and unusable paths now come from the helpers in
+  `tests/ambiente.py`, on every platform.
+- The GitHub runners did not install what the suite needs to start: the Qt
+  platform libraries, so Linux failed at import, and the fonts, so the
+  signature tests drew on nothing.
+- The licence check failed the build when gnu.org could not be reached. A
+  download that fails says nothing about the repository: it is now retried
+  and, if the text still does not arrive, it warns and lets the build
+  through. Only a changed `LICENSE` stops a build now.
+- Fifty interaction tests failed on Windows before any click: the PDF used as
+  a model was written over, file name included, while a window still had it
+  open, and Windows refuses to rewrite it. Each test now builds its own
+  model.
+- The test for the retry when a file is briefly busy was skipped on Windows,
+  where the substitution is never attempted: it now tries it on purpose, and
+  a second test covers the retry of the write that Windows ends up using.
+- The timer that closes the dialogs of a test kept running after the test was
+  over, and closed the dialogs of the next ones: a signature drawn by hand
+  vanished on its own.
+- One test measured a drag in PDF points while the pointer travels in screen
+  pixels: where a pixel is worth several points the field was moved correctly
+  and the test failed anyway. It now measures where the pointer really went.
+- A file left open could stop the whole suite, and a stopped suite kept the
+  machine busy until the platform gave up six hours later. A dialog nobody
+  closes is now closed after a few seconds, and every check has a time limit:
+  a blocked check fails in minutes and says which one it was.
+- Cut and paste on an element that does not accept them raised an internal
+  error instead of saying so: the message was built with a word that did not
+  match its own placeholder. Every message with a value inside is now checked
+  against its placeholders.
+- «Third-party notices» opened the browser for real, and on a machine without
+  one the call never returned: the check that presses every menu item recorded
+  the address instead.
+
+---
+
 ## 0.1.0 — 2026-10-03
 
 The first numbered release. Before this the number was `1.0.0` by default and

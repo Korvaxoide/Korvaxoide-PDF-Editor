@@ -1173,7 +1173,7 @@ class MainWindow(QMainWindow):
             self._status(tr("Nessun testo selezionato da copiare"))
             return
         self._status(
-            tr("Operazione «{modo}» non disponibile su questo elemento").format(mode=mode)
+            tr("Operazione «{modo}» non disponibile su questo elemento").format(modo=mode)
         )
 
     def action_select_all(self) -> None:

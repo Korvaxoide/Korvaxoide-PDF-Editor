@@ -1,7 +1,6 @@
 """Cattura la finestra principale per la verifica visiva."""
 
 import os
-import shutil
 import sys
 from pathlib import Path
 
@@ -24,10 +23,14 @@ from pdfeditor.signature import bgremove, render as sigrender, strokes as sk, ty
 from pdfeditor.ui import theme  # noqa: E402
 from pdfeditor.ui.main_window import MainWindow  # noqa: E402
 
-OUT = Path("/tmp/opencode/visual")
-if OUT.exists():
-    shutil.rmtree(OUT, ignore_errors=True)
-OUT.mkdir(parents=True, exist_ok=True)
+OUT = ambiente.ricrea("visual")
+
+# la firma di prova viene scritta con un font serif: senza un font sul computer
+# l'immagine sarebbe un foglio bianco e la rimozione dello sfondo cancellerebbe
+# tutto, senza dire niente
+FONT = ambiente.font_serif()
+if not FONT:
+    raise SystemExit("nessun font serif sul computer: la verifica non può disegnare")
 
 app = QApplication.instance() or QApplication([])
 st = sm.Settings()
@@ -82,7 +85,7 @@ def build_window(dark: bool = False) -> MainWindow:
     photo = Image.new("RGB", (440, 140), (240, 240, 244))
     ImageDraw.Draw(photo).text(
         (20, 26), "Luigi Bianchi",
-        font=ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf", 62),
+        font=ImageFont.truetype(FONT, 62),
         fill=(20, 24, 40),
     )
     w._place_signature(0, bgremove.remove_background(photo, bgremove.suggest_method(photo)), 170, 54)
