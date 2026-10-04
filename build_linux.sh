@@ -29,10 +29,14 @@ echo "==> 2/5 icone"
 
 echo "==> 3/5 icona del programma (Linux)"
 ICON_DIR="$HOME/.local/share/icons/hicolor"
+# il nome del file e' quello che chiede la voce di menu, cioe' il campo
+# Icon= di resources/korvaxoide-pdf-editor.desktop: con un nome diverso la
+# icona non viene trovata e la voce di menu resta con il simbolo generico
+ICON_NAME="korvaxoide-pdf-editor"
 mkdir -p "$ICON_DIR/256x256/apps" "$ICON_DIR/128x128/apps" "$ICON_DIR/64x64/apps"
-cp resources/icons/korvaxoide_pdf_editor_256.png "$ICON_DIR/256x256/apps/$NAME.png"
-cp resources/icons/korvaxoide_pdf_editor_128.png "$ICON_DIR/128x128/apps/$NAME.png"
-cp resources/icons/korvaxoide_pdf_editor_64.png "$ICON_DIR/64x64/apps/$NAME.png"
+cp resources/icons/korvaxoide_pdf_editor_256.png "$ICON_DIR/256x256/apps/$ICON_NAME.png"
+cp resources/icons/korvaxoide_pdf_editor_128.png "$ICON_DIR/128x128/apps/$ICON_NAME.png"
+cp resources/icons/korvaxoide_pdf_editor_64.png "$ICON_DIR/64x64/apps/$ICON_NAME.png"
 
 if [ "$MODE" = "--onedir" ]; then
   echo "==> 4/5 PyInstaller (cartella portatile)"
@@ -58,14 +62,26 @@ if ! command -v appimagetool >/dev/null 2>&1; then
   exit 0
 fi
 
-APP_DIR="$DIST/$NAME.AppDir"
+# il percorso e' assoluto perche' poco sotto appimagetool viene lanciato
+# dentro dist/, e da li' un percorso relativo punterebbe a dist/dist
+APP_DIR="$PWD/$DIST/$NAME.AppDir"
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/usr/bin" "$APP_DIR/usr/share/applications" "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
 cp -r "$DIST/$NAME/." "$APP_DIR/usr/bin/"
-cp resources/icons/korvaxoide_pdf_editor_256.png "$APP_DIR/usr/share/icons/hicolor/256x256/apps/$NAME.png"
+cp resources/icons/korvaxoide_pdf_editor_256.png "$APP_DIR/usr/share/icons/hicolor/256x256/apps/$ICON_NAME.png"
 cp resources/korvaxoide-pdf-editor.desktop "$APP_DIR/$NAME.desktop"
 cp resources/korvaxoide-pdf-editor.desktop "$APP_DIR/usr/share/applications/$NAME.desktop"
-cp resources/icons/korvaxoide_pdf_editor_256.png "$APP_DIR/$NAME.png"
+cp resources/icons/korvaxoide_pdf_editor_256.png "$APP_DIR/$ICON_NAME.png"
+
+# AppRun e' il punto di ingresso dell'immagine: senza questo file appimagetool
+# la costruisce lo stesso, ma lanciandola il runtime non trova nulla da
+# eseguire e l'AppImage esce subito con «Failed to run AppRun»
+cat > "$APP_DIR/AppRun" <<'APPRUN'
+#!/bin/sh
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/usr/bin/KorvaxoidePDF" "$@"
+APPRUN
+chmod +x "$APP_DIR/AppRun"
 
 cd "$DIST"
 appimagetool --no-appstream "$APP_DIR" "${NAME}-${VERSIONE}-x86_64.AppImage"
