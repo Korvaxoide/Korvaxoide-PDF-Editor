@@ -14,6 +14,41 @@ the *About* window all read it from there.
 
 ## Unreleased
 
+## 0.1.1 — 2026-10-04
+
+A packaging fix. The program itself does not change: this release exists so
+that the tag points to a build system that can actually produce the Windows
+executable.
+
+### Fixed
+
+- **The Windows executable could not be built as a single file.** The PyInstaller
+  spec passed `exclude_binaries=True` to `EXE()` and then ran `COLLECT`
+  unconditionally, so it could only ever produce a folder, and PyInstaller
+  refused the flag outright with `option(s) not allowed: --onedir/--onefile`.
+  `build_windows.ps1` went looking for `dist\KorvaxoidePDF.exe`, never found it,
+  and fell through to its "executable not found" warning without making the
+  versioned copy.
+- **Qt pruning for the single file.** With the folder layout the unused Qt
+  modules were deleted from disk after `COLLECT`; in a single file they are
+  dropped from the list that goes into the executable, before `EXE`, and only
+  under `PySide6/Qt`, so the interpreter, the Python extensions, PyMuPDF and
+  cryptography are all kept.
+
+### Changed
+
+- **The layout is now chosen per platform**: a single file on Windows, a folder
+  on Linux and macOS. Linux needs the folder because `build_linux.sh` packs
+  `dist/NAME/` into an AppImage, and `BUNDLE` needs the collect on macOS. Set
+  `KorvaxoidePDF_ONEDIR=1` or `=0` to override the default.
+
+### Packaging
+
+- The Windows executable is not signed. On Windows 11 with Smart App Control
+  enabled, Windows can warn about it before it starts.
+- The AppImage attached to this release is the 0.1.0 build, unchanged: it was
+  not rebuilt for 0.1.1.
+
 ## 0.1.0 — 2026-10-04
 
 The first numbered release. Before this the number was `1.0.0` by default and

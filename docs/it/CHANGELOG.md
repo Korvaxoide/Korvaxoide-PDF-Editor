@@ -14,6 +14,41 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ## Non pubblicato
 
+## 0.1.1 — 2026-10-04
+
+Correzione alla compilazione. Il programma in sé non cambia: questa versione
+esiste perché il tag punti a un sistema di compilazione che riesca davvero a
+produrre l'eseguibile Windows.
+
+### Corretto
+
+- **L'eseguibile Windows non si poteva compilare in file singolo.** La
+  specifica PyInstaller passava `exclude_binaries=True` a `EXE()` e poi eseguiva
+  `COLLECT` senza condizioni, quindi poteva produrre solo una cartella, e
+  PyInstaller rifiutava il parametro con `option(s) not allowed:
+  --onedir/--onefile`. `build_windows.ps1` cercava `dist\KorvaxoidePDF.exe`, non
+  lo trovava e finiva con l'avviso "eseguibile non trovato" senza creare la
+  copia con la versione.
+- **Potatura Qt nel file singolo.** Con la cartella i moduli Qt inutili venivano
+  cancellati da disco dopo `COLLECT`; nel file singolo vengono tolti dalla lista
+  che finisce dentro l'eseguibile, prima di `EXE`, e solo sotto `PySide6/Qt`,
+  così l'interprete, le estensioni Python, PyMuPDF e la cifratura restano
+  tutti.
+
+### Cambiato
+
+- **La struttura si sceglie per piattaforma**: file singolo su Windows, cartella
+  su Linux e macOS. Linux ha bisogno della cartella perché `build_linux.sh`
+  impacchetta `dist/NOME/` in un AppImage, e su macOS `BUNDLE` richiede la
+  raccolta. `KorvaxoidePDF_ONEDIR=1` o `=0` forza la scelta.
+
+### Distribuzione
+
+- L'eseguibile Windows non è firmato. Su Windows 11 con Smart App Control
+  attivo, Windows può mostrare un avviso prima di avviarlo.
+- L'AppImage allegato a questa versione è la build 0.1.0, invariata: non è
+  stato ricostruito per la 0.1.1.
+
 ## 0.1.0 — 2026-10-04
 
 Prima versione numerata. Prima di questa il numero era `1.0.0` di default e

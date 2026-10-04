@@ -1,6 +1,6 @@
 """Korvaxoide PDF Editor — editor PDF multipiattaforma (Linux/Windows)."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __app_name__ = "Korvaxoide PDF Editor"
 #: nome breve, usato per i nomi dei file e per la finestra di stampa
 __short_name__ = "Korvaxoide"
