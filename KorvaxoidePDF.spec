@@ -15,6 +15,7 @@ manca, si prosegue senza. ``build_linux.sh`` e ``build_windows.ps1`` eseguono
 i due passi nell'ordine giusto.
 """
 
+import os
 import re
 import shutil
 import sys
@@ -23,6 +24,21 @@ from pathlib import Path
 ROOT = Path(SPECPATH).resolve()
 IS_WINDOWS = sys.platform.startswith("win")
 IS_MACOS = sys.platform == "darwin"
+
+# Struttura della distribuzione: file singolo oppure cartella.
+# PyInstaller rifiuta --onefile/--onedir quando lo spec contiene gia' COLLECT,
+# quindi la scelta si prende qui dentro.
+#   Windows  -> file singolo, e quello che build_windows.ps1 si aspetta
+#                (cerca dist/NOME.exe e ne ricava la copia con la versione).
+#   Linux    -> cartella, build_linux.sh impacchetta dist/NAME/ in AppImage.
+#   macOS    -> cartella, BUNDLE richiede la raccolta.
+# La variabile d'ambiente KorvaxoidePDF_ONEDIR=1 forza la cartella, =0 forza
+# il file singolo, qualunque sia la piattaforma.
+_onedir = os.environ.get("KorvaxoidePDF_ONEDIR", "").strip().lower()
+if _onedir in ("", "auto"):
+    ONEDIR = not IS_WINDOWS
+else:
+    ONEDIR = _onedir not in ("0", "false", "no")
 
 # La versione viene letta dal pacchetto con una regex, non importandolo:
 # importare ``pdfeditor`` qui trascinerebbe dentro la specifica tutto quello
@@ -96,6 +112,19 @@ for cartella, destinazione in (("resources/icons", "resources/icons"),
 # mantenute le italiane (potatura, in fondo).
 
 
+def _non_usato(f: Path) -> bool:
+    """True se il nome del file e' quello di un modulo Qt che l'app non usa."""
+    nome = f.name.lower()
+    return any(k in nome for k in (
+        "webengine", "quick", "qml", "designer", "multimedia", "charts",
+        "datavisualization", "bluetooth", "nfc", "positioning", "sensors",
+        "serialport", "scxml", "states", "texttospeech", "remoteobjects",
+        "spatialaudio", "virtualkeyboard", "httpserver", "networkauth",
+        "quick3d", "3dcore", "3drender", "3dinput", "3dlogic", "3danimation",
+        "3dextras", "sqldrivers", "designer", "help", "qtquick", "shadertools",
+    ))
+
+
 def potatura_qt(percorso: Path) -> tuple[int, int]:
     """Rimuove librerie e plugin Qt non necessari. Ritorna (file, byte rimossi)."""
     rimossi = 0
@@ -113,17 +142,6 @@ def potatura_qt(percorso: Path) -> tuple[int, int]:
                     rimossi += 1
                 except OSError:
                     pass
-
-    def _non_usato(f: Path) -> bool:
-        nome = f.name.lower()
-        return any(k in nome for k in (
-            "webengine", "quick", "qml", "designer", "multimedia", "charts",
-            "datavisualization", "bluetooth", "nfc", "positioning", "sensors",
-            "serialport", "scxml", "states", "texttospeech", "remoteobjects",
-            "spatialaudio", "virtualkeyboard", "httpserver", "networkauth",
-            "quick3d", "3dcore", "3drender", "3dinput", "3dlogic", "3danimation",
-            "3dextras", "sqldrivers", "designer", "help", "qtquick", "shadertools",
-        ))
 
     # Nella distribuzione su cartella Qt sta sotto _internal
     qt = percorso / "_internal" / "PySide6" / "Qt"
@@ -174,6 +192,54 @@ def potatura_qt(percorso: Path) -> tuple[int, int]:
     return rimossi, byte
 
 
+def potatura_onefile(a_p) -> tuple[int, int]:
+    """Stessa potatura di ``potatura_qt`` ma per il file singolo.
+
+    Sulla cartella i file si eliminano da disco dopo COLLECT; nell'eseguibile
+    unico devono sparire prima, dalla lista che ci finisce dentro. Si tocca
+    solo ``PySide6/Qt``: il resto (interprete, estensioni Python, PyMuPDF,
+    cifratura) non e' Qt e va tenuto tutto.
+    """
+    rimossi = 0
+    byte = 0
+
+    def _scarta(voci, tenere):
+        nonlocal rimossi, byte
+        tenute = []
+        for voce in voci:
+            # PyInstaller 6: (destinazione, sorgente, tipo); prima: (destinazione, sorgente)
+            percorso = str(voce[0]).replace("\\", "/")
+            if tenere(percorso, Path(percorso).name):
+                tenute.append(voce)
+                continue
+            try:
+                byte += Path(voce[1]).stat().st_size
+            except OSError:
+                pass
+            rimossi += 1
+        return tenute
+
+    def _binario(percorso: str, nome: str) -> bool:
+        if "PySide6/Qt/" not in percorso + "/":
+            return True
+        return not _non_usato(Path(nome))
+
+    def _dato(percorso: str, nome: str) -> bool:
+        if "PySide6/Qt/" not in percorso + "/":
+            return True
+        parti = percorso.split("/")
+        if "translations" in parti:
+            # le traduzioni italiane sono le uniche che servono
+            return nome.lower().endswith("_it")
+        if "qml" in parti:
+            return False
+        return True
+
+    a_p.binaries = _scarta(a_p.binaries, _binario)
+    a_p.datas = _scarta(a_p.datas, _dato)
+    return rimossi, byte
+
+
 a_p = Analysis(
     [str(ROOT / "avvia.py")],
     pathex=[str(ROOT)],
@@ -192,11 +258,16 @@ a_p = Analysis(
 
 pyz = PYZ(a_p.pure)
 
+if not ONEDIR:
+    _r, _b = potatura_onefile(a_p)
+    print(f"[potatura Qt] file singolo: rimossi {_r} elementi ({_b / (1024 * 1024):.0f} MB)")
+
 exe = EXE(
     pyz,
     a_p.scripts,
-    [],
-    exclude_binaries=True,
+    a_p.binaries if not ONEDIR else [],
+    a_p.datas if not ONEDIR else [],
+    exclude_binaries=ONEDIR,
     name="KorvaxoidePDF",
     debug=False,
     bootloader_ignore_signals=False,
@@ -214,25 +285,26 @@ exe = EXE(
     else None,
 )
 
-coll = COLLECT(
-    exe,
-    a_p.binaries,
-    a_p.datas,
-    strip=False,
-    upx=False,
-    upx_exclude=[],
-    name="KorvaxoidePDF",
-)
+if ONEDIR:
+    coll = COLLECT(
+        exe,
+        a_p.binaries,
+        a_p.datas,
+        strip=False,
+        upx=False,
+        upx_exclude=[],
+        name="KorvaxoidePDF",
+    )
 
-# La potatura va eseguita dopo COLLECT, quando i file sono su disco.
-_base = Path(DISTPATH)
-if not _base.is_absolute():
-    _base = Path(SPECPATH) / _base
-print("[potatura] percorso:", _base / "KorvaxoidePDF", "esiste:", (_base / "KorvaxoidePDF").is_dir())
-_rimossi, _byte = potatura_qt(_base / "KorvaxoidePDF")
-print(f"[potatura Qt] rimossi {_rimossi} elementi ({_byte / (1024 * 1024):.0f} MB)")
+    # La potatura va eseguita dopo COLLECT, quando i file sono su disco.
+    _base = Path(DISTPATH)
+    if not _base.is_absolute():
+        _base = Path(SPECPATH) / _base
+    print("[potatura] percorso:", _base / "KorvaxoidePDF", "esiste:", (_base / "KorvaxoidePDF").is_dir())
+    _rimossi, _byte = potatura_qt(_base / "KorvaxoidePDF")
+    print(f"[potatura Qt] rimossi {_rimossi} elementi ({_byte / (1024 * 1024):.0f} MB)")
 
-if IS_MACOS:
+if IS_MACOS and ONEDIR:
     app = BUNDLE(
         coll,
         name="Korvaxoide PDF Editor.app",
