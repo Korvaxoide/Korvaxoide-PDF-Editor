@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ast
 import re
+import string
 import sys
 from pathlib import Path
 
@@ -204,4 +205,50 @@ def test_il_catalogo_conosce_tutti_i_segnaposto():
     mancanti = [k for k in traduci.chiavi_mancanti() if "{…" not in k]
     assert not mancanti, (
         f"{len(mancanti)} chiavi con segnaposto non sono nel catalogo: {mancanti[:10]}"
+    )
+
+def _segnaposto_e_parole_formato(relativo: str) -> list[tuple[int, str]]:
+    """Chiamate ``tr(...).format(...)`` in cui nome e parola non coincidono.
+
+    ``tr("Operazione «{modo}»…").format(mode=modo)`` si legge bene e funziona
+    male: `format` cerca ``{modo}``, non trova la parola ``mode`` e solleva
+    `KeyError`. L'errore arriva quando l'utente preme Taglia o Incolla su un
+    elemento che non li accetta, e in una finestra sembra che il programma
+    abbia scritto qualcosa in console.
+    """
+    albero = ast.parse((RADICE / "pdfeditor" / relativo).read_text(encoding="utf-8"))
+    sbagliati: list[tuple[int, str]] = []
+    for nodo in ast.walk(albero):
+        if not isinstance(nodo, ast.Call):
+            continue
+        funzione = nodo.func
+        if not (isinstance(funzione, ast.Attribute) and funzione.attr == "format"):
+            continue
+        chiamata = funzione.value
+        if not isinstance(chiamata, ast.Call):
+            continue
+        nome = getattr(chiamata.func, "id", None) or getattr(chiamata.func, "attr", None)
+        if nome not in {"tr", "_tr"} or not chiamata.args:
+            continue
+        testo = chiamata.args[0]
+        if not (isinstance(testo, ast.Constant) and isinstance(testo.value, str)):
+            continue
+        try:
+            campi = {nome for _, nome, _, _ in string.Formatter().parse(testo.value) if nome}
+        except ValueError:
+            continue
+        parole = {kw.arg for kw in nodo.keywords if kw.arg}
+        if campi and campi != parole:
+            sbagliati.append((nodo.lineno, f"{testo.value!r} con {sorted(parole)}"))
+    return sbagliati
+
+
+@pytest.mark.parametrize("relativo, cerca", SORGENTI, ids=[s for s, _ in SORGENTI])
+def test_nessun_segnaposto_ha_il_nome_di_un_altro(relativo, cerca):
+    """Ogni segnaposto deve essere riempito con una parola dello stesso nome."""
+    sbagliati = _segnaposto_e_parole_formato(relativo)
+    assert not sbagliati, (
+        f"{relativo}: {len(sbagliati)} messaggi con un segnaposto riempito "
+        f"col nome sbagliato:\n"
+        + "\n".join(f"    riga {riga}: {testo}" for riga, testo in sbagliati)
     )

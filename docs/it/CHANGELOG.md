@@ -59,6 +59,13 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
   Ora un dialogo che nessuno chiude viene chiuso dopo qualche secondo e ogni
   verifica ha un tempo massimo: una verifica bloccata fallisce in minuti e
   dice quale è stata.
+- Taglia e Incolla su un elemento che non li accetta sollevavano un errore
+  interno invece di dirlo: il messaggio era costruito con una parola diversa
+  dal suo segnaposto. Ora ogni messaggio con un valore dentro viene confrontato
+  con i suoi segnaposto.
+- «Terze parti» apriva davvero il browser e su una macchina senza browser la
+  chiamata non tornava mai: la verifica che preme ogni voce di menu registra
+  l'indirizzo invece di aprirlo.
 
 ---
 

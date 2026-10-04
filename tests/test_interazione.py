@@ -1046,14 +1046,29 @@ def test_firma_disegnata_col_mouse(finestra, monkeypatch):
 # ------------------------------------------------------------------- menu
 
 
-def test_ogni_voce_di_menu_reagisce(finestra):
+def test_ogni_voce_di_menu_reagisce(finestra, monkeypatch):
     """Nessuna voce di menu deve sollevare un errore.
 
     È il controllo che ha scoperto «Appiattisci annotazioni», che chiamava un
     metodo inexistente e falliva ogni volta.
+
+    «Terze parti» apre l'elenco delle licenze nel browser: qui il browser non
+    parte, si registra solo l'indirizzo. Su Windows `os.startfile` su una macchina
+    senza browser non ritorna mai, e la verifica restava appesa sei ore prima
+    che la piattaforma la spegnesse.
     """
+    import webbrowser
+
     from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import QDialog, QMessageBox
+
+    aperte: list[str] = []
+
+    def annota(url, *_a, **_k):
+        aperte.append(url)
+        return True
+
+    monkeypatch.setattr(webbrowser, "open", annota)
 
     # le voci che aprirebbero finestre di sistema o chiuderebbero il programma
     saltate = {
@@ -1118,6 +1133,11 @@ def test_ogni_voce_di_menu_reagisce(finestra):
             errori.append(f"{' ▸ '.join(percorso + (testo,))}: {type(exc).__name__}: {exc}")
     timer.stop()
     assert not errori, "voci di menu che falliscono:\n  " + "\n  ".join(errori)
+    # la voce delle terze parti deve aver chiesto l'apertura dell'elenco, e non
+    # è stato un caso: il browser vero non è mai partito
+    assert [u for u in aperte if u.endswith("THIRD-PARTY.md")], (
+        f"la voce delle terze parti non ha aperto l'elenco delle licenze: {aperte}"
+    )
 
 
 def test_la_presentazione_si_puo_e_chiudere(finestra):

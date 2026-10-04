@@ -79,11 +79,17 @@ def _un_dialogo_modale_non_puo_fermare_la_suite():
     dialogo o un avviso visibile da più di qualche secondo viene chiuso: la
     verifica che non arriva da nessuna parte fallisce e la suite va avanti.
 
-    Il timer appartiene a questa verifica e muore con lei: se sopravvivesse,
-    chiuderebbe i dialogi delle verifiche successive.
+Il timer appartiene a questa verifica e muore con lei: se sopravvivesse,
+    chiuderebbe i dialoghi delle verifiche successive.
     """
-    from PySide6.QtCore import QTimer
-    from PySide6.QtWidgets import QApplication, QDialog
+    try:
+        from PySide6.QtCore import QTimer
+        from PySide6.QtWidgets import QApplication, QDialog
+    except ImportError:
+        # il controllo delle licenze non installa PySide6 e non ha bisogno di
+        # guardare i dialoghi: la documentazione si controlla senza Qt
+        yield
+        return
 
     app = QApplication.instance()
     if app is None:  # una verifica senza interfaccia non ha dialoghi

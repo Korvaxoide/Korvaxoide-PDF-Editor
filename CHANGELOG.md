@@ -52,10 +52,17 @@ the *About* window all read it from there.
 - One test measured a drag in PDF points while the pointer travels in screen
   pixels: where a pixel is worth several points the field was moved correctly
   and the test failed anyway. It now measures where the pointer really went.
-- A dialog left open could stop the whole suite, and a stopped suite kept the
+- A file left open could stop the whole suite, and a stopped suite kept the
   machine busy until the platform gave up six hours later. A dialog nobody
   closes is now closed after a few seconds, and every check has a time limit:
   a blocked check fails in minutes and says which one it was.
+- Cut and paste on an element that does not accept them raised an internal
+  error instead of saying so: the message was built with a word that did not
+  match its own placeholder. Every message with a value inside is now checked
+  against its placeholders.
+- «Third-party notices» opened the browser for real, and on a machine without
+  one the call never returned: the check that presses every menu item recorded
+  the address instead.
 
 ---
 
