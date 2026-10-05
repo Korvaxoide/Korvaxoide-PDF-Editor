@@ -78,12 +78,14 @@ tests/
   test_interazione.py  real events on the window
   test_funzionalita.py every feature, one at a time
   test_dialoghi.py     every dialog opens and fits the screen
+  test_avvio.py        what start-up loads, and what it must not
   conftest.py          shared fixtures
   integration.py       complete flows
   finale.py            end-to-end check
   visual.py            interface captures
 tools/
   make_icons.py        generates the icons (they are not in the repository)
+  bench_startup.py     measures start-up, phase by phase
 resources/
   korvaxoide-pdf-editor.desktop   application-menu entry
 ```
@@ -278,6 +280,56 @@ The CI now has a step that checks the opposite: every declared dependency must
 appear among the imports in `pdfeditor/`. Optional dependencies (scipy, for
 background removal) are declared as optional, not as required.
 
+### What start-up loads is what start-up pays for
+
+Imports at the top of a module are free-looking and are not. Every one of them
+is paid on every launch, by every user, whether or not that code is ever used.
+
+The start-up used to import NumPy (about 70 ms, on its own) because
+`signature.bgremove` imported it, and `bgremove` was reached because
+`signature.manager` needed it in order to save a PNG. `manager` is constructed at
+start-up only to count the saved signatures and draws nothing. It also imported
+nearly two thousand lines of dialog windows, which the user may never open.
+
+Three rules follow, and `tests/test_avvio.py` checks all three in a clean
+interpreter:
+
+1. **A module that is only needed when the user asks for something imports its
+   heavy dependencies inside the function that uses them.** `printing`, `ocr`
+   and `thumbnails` already worked this way. Do the same for anything new.
+2. **Annotations do not cost anything.** With `from __future__ import
+   annotations` a type is a string until someone asks for it, so a `TYPE_CHECKING`
+   block keeps the names readable for people and linters while importing
+   nothing:
+
+   ```python
+   if TYPE_CHECKING:
+       from PIL import Image
+
+       from .dialogs import props
+   ```
+3. **Cache what is expensive to recompute, and return copies of it.** Enumerating
+   the system fonts opens every font with MuPDF to look at its letters: about
+   100 ms. It is now computed once, and `list_fonts()` hands out copies so a
+   caller that edits an entry cannot write into the cache. When the cached thing
+   can change during a session, expose a function that clears it.
+
+Two things that look like optimisations are not, and were measured before being
+left alone: `theme.stylesheet()` takes 6 microseconds (the 10 ms of theming are
+Qt parsing the CSS, which no cache avoids), and dropping the eager
+`import pymupdf` from start-up makes it *slower*, because PyMuPDF and Qt share
+native libraries and whoever loads first keeps them resident for the other.
+
+Measure before changing, and measure by comparison:
+
+```bash
+./venv/bin/python -m tools.bench_startup        # the phases, and what got loaded
+```
+
+Run it on an otherwise idle machine and compare two versions in the same time
+window, alternating between them: the machine is rarely quiet enough for two
+runs taken minutes apart to be comparable.
+
 ### Moving an image is not deleting and reinserting it
 
 `Document.move_image` re-reads the image and reinserts it, because images are
@@ -320,6 +372,7 @@ the light theme they stayed white in the dark theme too.
 ./venv/bin/python -m pytest tests/test_funzionalita.py -q
 ./venv/bin/python -m pytest tests/test_dialoghi.py -q
 ./venv/bin/python -m pytest tests/test_interazione.py -q
+./venv/bin/python -m pytest tests/test_avvio.py -q
 ./venv/bin/python -m pytest tests/test_documentazione.py -q
 ./venv/bin/python tests/integration.py
 ./venv/bin/python tests/finale.py
@@ -390,6 +443,7 @@ they take their fonts and their folders from `ambiente`.
 | `test_interazione.py` | real clicks, keystrokes and shortcuts |
 | `test_funzionalita.py` | every feature, one at a time |
 | `test_dialoghi.py` | every dialog opens and fits the screen |
+| `test_avvio.py` | what start-up loads, and what it must not |
 | `test_regressioni.py` | defects found going through the engine feature by feature |
 | `test_regressioni_ui.py` | the same defects, with real mouse events |
 | `test_documentazione.py` | links, anchors and files the documents cite |

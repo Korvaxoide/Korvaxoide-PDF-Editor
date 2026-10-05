@@ -7,9 +7,8 @@ import tempfile
 import time
 import webbrowser
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from PIL import Image
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QCloseEvent, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
@@ -41,9 +40,18 @@ from ..core import units
 from ..features import digitalsign
 from ..signature import manager as sigmanager
 from . import icons, panels, theme, toolbars
-from .dialogs import props
-from .dialogs.signature_dialog import SignatureDialog
 from .page_view import AREA_CLIC, PdfView
+
+# Pillow, i dialoghi e la finestra di firma sono importati dentro le azioni che
+# li aprono. Sono quasi duemila righe di dialoghi e quasi 20 ms di import: pagarli
+# all'avvio voleva dire costruire l'interfaccia di finestre che l'utente potrebbe
+# non aprire mai. Le annotazioni restano sotto, per chi le deve leggere: con
+# `from __future__ import annotations` sono stringhe a runtime e non costano
+# niente.
+if TYPE_CHECKING:
+    from PIL import Image
+
+    from .dialogs import props
 
 #: I filtri delle finestre di dialogo sono funzioni e non costanti: la parte
 #: leggibile e' una frase da tradurre, e in una costante di modulo la lingua
@@ -190,12 +198,23 @@ class MainWindow(QMainWindow):
         self._thumb_timer.setInterval(120)
         self._thumb_timer.timeout.connect(self._refresh_visible_thumbs)
         self._busy = False
+        # Il recupero viene valutato al primo giro del ciclo di eventi, e quel
+        # giro puo' arrivare mentre si sta aprendo un file: `load_path` chiama
+        # `_busy_start`, che svuota la coda degli eventi. Serve un ricordo della
+        # richiesta dell'utente, che viene prima del recupero.
+        self._recupero_annullato = False
 
         self.setWindowTitle(__app_name__)
         self.resize(1440, 900)
         self._build()
         self._apply_theme()
-        self._load_recovery()
+        # il recupero chiede una risposta con una finestra modale, e una finestra
+        # modale blocca: prima stava qui, dentro il costruttore, quindi l'utente
+        # vedeva comparire una domanda *prima* della finestra del programma, e
+        # con un documento da recuperare l'avvio sembrava lento e non lo era.
+        # Rimandato al primo giro del ciclo di eventi, la finestra e' gia' stata
+        # disegnata e la domanda arriva sopra un programma che si vede.
+        QTimer.singleShot(0, self._load_recovery)
         self._start_autosave()
 
     # ------------------------------------------------------------------ UI
@@ -713,6 +732,11 @@ class MainWindow(QMainWindow):
             self.load_path(path)
 
     def load_path(self, path: str, password: str = "") -> bool:
+        # L'utente ha detto quale file vuole: il documento recuperato non gliela
+        # fa vedere al suo posto, ne' adesso ne' piu' tardi. Va deciso qui, prima
+        # di `_busy_start`, che svuota la coda degli eventi e lascerebbe passare
+        # il recupero mentre il documento non e' ancora aperto.
+        self._recupero_annullato = True
         self._busy_start("Apertura…")
         try:
             self.doc.open(path, password)
@@ -794,6 +818,8 @@ class MainWindow(QMainWindow):
 
     def file_reduce_size(self) -> None:
         """Riduce le immagini del documento e scrive il risultato in un file nuovo."""
+        from .dialogs import props
+
         if not self.doc.is_open:
             return
         self._busy_start("Analisi delle immagini…")
@@ -935,6 +961,8 @@ class MainWindow(QMainWindow):
             self._error(exc, "Stampa non riuscita")
 
     def file_export(self) -> None:
+        from .dialogs import props
+
         if not self.doc.is_open:
             return
         dlg = props.ExportDialog(self.doc.page_count, self, self.view.current_page())
@@ -1022,6 +1050,8 @@ class MainWindow(QMainWindow):
         self._busy_end(f"Importate {len(files)} immagini")
 
     def file_merge(self) -> None:
+        from .dialogs import props
+
         dlg = props.MergeDialog(self)
         if dlg.exec() != props.QDialog.Accepted:
             return
@@ -1041,6 +1071,8 @@ class MainWindow(QMainWindow):
         self._busy_end(f"Uniti {len(files)} documenti")
 
     def file_split(self) -> None:
+        from .dialogs import props
+
         dlg = props.SplitDialog(self.doc.page_count, self)
         if dlg.exec() != props.QDialog.Accepted:
             return
@@ -1244,6 +1276,8 @@ class MainWindow(QMainWindow):
         self._status(tr("Proprietà aggiornate"))
 
     def _edit_xmp(self) -> None:
+        from .dialogs import props
+
         dlg = props.XmpDialog(self.doc.xmp_metadata(), self)
         if dlg.exec() == props.QDialog.Accepted:
             self.doc.set_xmp_metadata(dlg.xml())
@@ -1396,6 +1430,8 @@ class MainWindow(QMainWindow):
                         break
 
     def action_annot_style(self) -> None:
+        from .dialogs import props
+
         shape = {"rect": "rect", "circle": "circle", "line": "line", "arrow": "arrow",
                  "ink": "ink", "polygon": "polygon", "note": "note", "stamp": "stamp"}.get(self.tool, "rect")
         dlg = props.AnnotationStyleDialog(shape, self)
@@ -1410,6 +1446,8 @@ class MainWindow(QMainWindow):
             self._status(tr("Stile aggiornato"))
 
     def action_marker_style(self) -> None:
+        from .dialogs import props
+
         dlg = props.MarkerStyleDialog(self.marker_style["mode"], self)
         if dlg.exec() == props.QDialog.Accepted:
             v = dlg.values()
@@ -1418,6 +1456,8 @@ class MainWindow(QMainWindow):
             self._status(tr("Stile evidenziazione aggiornato"))
 
     def action_text_style(self) -> None:
+        from .dialogs import props
+
         dlg = props.TextBoxDialog(self, self.text_style["fontname"], self.text_style["fontsize"])
         if dlg.exec() == props.QDialog.Accepted:
             v = dlg.values()
@@ -1480,6 +1520,8 @@ class MainWindow(QMainWindow):
         immagini non sono annotazioni, quindi non c'è una `FieldInfo` come per i
         campi: si guarda il tipo di elemento che la vista ha selezionato.
         """
+        from .dialogs import props
+
         if not self.doc.is_open:
             return
         xref = self.view.selection_xref()
@@ -1522,6 +1564,8 @@ class MainWindow(QMainWindow):
         self._status(tr("Immagine aggiornata"))
 
     def action_field_props(self) -> None:
+        from .dialogs import props
+
         hit = self.view.active_field
         fields = self.doc.fields()
         if not fields:
@@ -1820,6 +1864,8 @@ class MainWindow(QMainWindow):
         self._status(tr("Pagine ruotate"))
 
     def page_insert(self) -> None:
+        from .dialogs import props
+
         if not self.doc.is_open:
             return
         info = self.doc.page_info(self.view.current_page())
@@ -1852,6 +1898,8 @@ class MainWindow(QMainWindow):
         self._status(tr("Pagine inserite"))
 
     def page_setup(self) -> None:
+        from .dialogs import props
+
         if not self.doc.is_open:
             return
         pages = self._selected_pages()
@@ -1870,6 +1918,8 @@ class MainWindow(QMainWindow):
 
     def pages_number(self) -> None:
         """Aggiunge la numerazione alle pagine selezionate."""
+        from .dialogs import props
+
         if not self.doc.is_open:
             return
         dlg = props.PageNumberDialog(
@@ -1915,6 +1965,8 @@ class MainWindow(QMainWindow):
 
     def page_crop(self) -> None:
         """Ritaglia le pagine selezionate, riducendo l'area visibile."""
+        from .dialogs import props
+
         if not self.doc.is_open:
             return
         pagine = self._selected_pages()
@@ -1954,6 +2006,8 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------- firma
 
     def action_signature(self) -> None:
+        from .dialogs.signature_dialog import SignatureDialog
+
         if not self.doc.is_open:
             return
         page = self.view.current_page()
@@ -1969,6 +2023,8 @@ class MainWindow(QMainWindow):
                               flatten=dlg.chk_flatten.isChecked(), field=dlg.signature_field())
 
     def _sign_field(self, page: int, info) -> None:
+        from .dialogs.signature_dialog import SignatureDialog
+
         dlg = SignatureDialog(self.doc, page, self.library, self)
         dlg.cmb_signature_field.setCurrentIndex(
             next((i for i, f in enumerate(dlg.sig_fields) if f.xref == info.xref), 0)
@@ -2103,6 +2159,8 @@ class MainWindow(QMainWindow):
         self.view.status.emit("Firma selezionata: trascinala, o usa le maniglie")
 
     def action_signature_library(self) -> None:
+        from .dialogs.signature_dialog import SignatureDialog
+
         dlg = SignatureDialog(self.doc, self.view.current_page(), self.library, self)
         dlg.tabs.setCurrentIndex(3)
         try:
@@ -2149,6 +2207,8 @@ class MainWindow(QMainWindow):
         self._status(tr("Firma «{nome}» inserita").format(nome=entry.display_name))
 
     def action_digital_sign(self) -> None:
+        from .dialogs import props
+
         if not self.doc.is_open:
             return
         dlg = props.SignatureSetupDialog(self.doc, self.view.current_page(), self)
@@ -2265,6 +2325,8 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------ strumenti
 
     def action_security(self) -> None:
+        from .dialogs import props
+
         if not self.doc.is_open:
             return
         dlg = props.SecurityDialog(self.doc, self)
@@ -2311,6 +2373,8 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, tr("OCR"), msg)
 
     def action_preferences(self) -> None:
+        from .dialogs import props
+
         dlg = props.PreferencesDialog(self.settings, self)
         if dlg.exec() == props.QDialog.Accepted:
             v = dlg.values()
@@ -2332,6 +2396,8 @@ class MainWindow(QMainWindow):
         aperti. Si dice, perché una lingua che cambia a metà è la cosa più
         fastidiosa che possa capitare.
         """
+        from .dialogs import props
+
         dlg = props.LanguageDialog(i18n.LINGUE, i18n.lingua(), self)
         if dlg.exec() != props.QDialog.Accepted:
             return
@@ -2507,6 +2573,8 @@ class MainWindow(QMainWindow):
         # Il punto premuto e' nello spazio mostrato della pagina, mentre il
         # documento registra tutto nello spazio pagina: su una pagina ruotata i
         # due coincidono solo a rotazione zero.
+        from .dialogs import props
+
         if tool in AREA_PUNTO and len(payload) == 2 and _come_punto(payload[1]):
             pagina, punto = payload
             larghezza, altezza = AREA_PUNTO[tool]
@@ -2732,6 +2800,8 @@ class MainWindow(QMainWindow):
             raise docmod.DocumentError(f"Strumento non gestito: {tool}")
 
     def _open_signature_at(self, page: int, rect: geo.Rect) -> None:
+        from .dialogs.signature_dialog import SignatureDialog
+
         dlg = SignatureDialog(self.doc, page, self.library, self)
         if dlg.exec() != SignatureDialog.Accepted or dlg.result_image is None:
             return
@@ -2895,6 +2965,11 @@ class MainWindow(QMainWindow):
     def _load_recovery(self) -> None:
         if not self.settings.get("recover", True):
             return
+        if self._recupero_annullato or self.doc.is_open:
+            # Il documento e' gia' aperto, o l'utente ne ha chiesto uno esplicitamente
+            # dalla riga di comando o dal menu: proporre di sostituirlo con un
+            # documento recuperato sarebbe il contrario di quello che ha scritto.
+            return
         from ..core.settings import data_dir
 
         rec = data_dir() / "recupero"
@@ -2951,6 +3026,8 @@ def _pts(data) -> list[tuple[float, float]]:
 
 
 def _flatten_on_white(img: Image.Image) -> Image.Image:
+    from PIL import Image
+
     base = Image.new("RGB", img.size, (255, 255, 255))
     base.paste(img.convert("RGBA"), mask=img.convert("RGBA").split()[3])
     return base
@@ -2965,6 +3042,7 @@ def _white_to_alpha(img: Image.Image) -> Image.Image:
     una firma con antialiasing ha sfumature che vanno tenute.
     """
     import numpy as np
+    from PIL import Image
 
     rgba = np.asarray(img.convert("RGBA")).astype(np.int16)
     bianco = (rgba[:, :, 0] > 250) & (rgba[:, :, 1] > 250) & (rgba[:, :, 2] > 250)

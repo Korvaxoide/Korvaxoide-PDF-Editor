@@ -17,6 +17,7 @@ import os
 import random
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import pymupdf
@@ -102,6 +103,37 @@ def list_fonts(include_scripts: bool = True) -> list[dict[str, object]]:
 
     I font che non hanno le lettere latine restano in fondo, non in testa: sono
     inutili per una firma e vengono scambiati per un errore del programma.
+
+    Ogni voce è una copia: la ricerca è in cache e va riutilizzata, ma una voce
+    restituita non può essere quella dell'archivio, altrimenti un chiamante che
+    la modifica (per esempio aggiungendo un'etichetta) scriverebbe dentro la
+    cache e il secondo chiamante troverebbe il font diversamente.
+    """
+    return [dict(voce) for voce in _elenco_font(include_scripts)]
+
+
+def svuota_cache_font() -> None:
+    """Dimentica i font trovati, per rivederli dopo averne installati di nuovi.
+
+    La ricerca è costosa — apre ogni font con MuPDF per guardare le lettere che
+    ha — quindi il risultato si tiene per la sessione. Un font installato a
+    programma aperto non compare nelle finestre successive: si chiama questa e la
+    ricerca ricomincia. Il programma non lo chiama da solo, perché installare un
+    font mentre si lavora è rarissimo e la ricerca costa circa un secondo.
+    """
+    _elenco_font.cache_clear()
+
+
+@lru_cache(maxsize=4)
+def _elenco_font(include_scripts: bool) -> tuple[dict[str, object], ...]:
+    """I font trovati, una volta sola per ogni modo di ricerca.
+
+    Il risultato non cambia mentre il programma gira, e il calcolo è pesante:
+    su una macchina con i font di sistema sono qualche centinaio di file, e per
+    ognuno `ha_lettere` apre il font in MuPDF. Senza cache, aprire la finestra
+    della firma costava due scansioni (l'elenco e il font predefinito che lo
+    richiede) e ogni firma digitata senza percorso valido ne chiedeva una terza
+    a ogni ridisegno.
     """
     found: dict[str, dict[str, object]] = {}
     exts = (".ttf", ".otf", ".ttc")
@@ -132,7 +164,7 @@ def list_fonts(include_scripts: bool = True) -> list[dict[str, object]]:
             str(e["name"]).lower(),
         )
     )
-    return out
+    return tuple(out)
 
 
 def pick_default_font() -> str:

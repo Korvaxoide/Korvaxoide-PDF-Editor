@@ -14,6 +14,86 @@ the *About* window all read it from there.
 
 ## Unreleased
 
+### Changed
+
+- **The program starts noticeably faster.** Measured with
+  `tools/bench_startup.py` on the reference machine, the time from the first
+  instruction to the first painted window drops by about 23% (from roughly
+  330 ms to roughly 255 ms). The gains are in what the program loads before it
+  can show itself:
+  - **NumPy no longer loads at start-up.** It costs about 70 ms on its own and
+    entered through `signature.bgremove`, the background removal of a signature
+    image. Nothing at start-up touches that module, but
+    `signature.manager` imported it in order to be able to save a PNG. The
+    signature modules that only the library of saved signatures needs are now
+    imported by the methods that use them.
+  - **Pillow no longer loads at start-up.** It was only needed to read and
+    write signature images.
+  - **Nearly two thousand lines of dialog windows are no longer imported at
+    start-up.** `dialogs/props.py` (about 8 ms) and `signature_dialog.py`
+    (about 5 ms) are imported by the actions that open them, which is how
+    `printing`, `ocr` and `thumbnails` already worked.
+  - **The English catalogue is no longer read at import.** The module ended by
+    applying the default language, which read and parsed 36 KiB of JSON before
+    the start-up could read the user's preference; for an Italian user the work
+    was discarded, because Italian is the source language and has no catalogue.
+  - **The application icon is drawn once instead of on every request.** The
+    desktop asks for it more than once, for the window, the menu and the
+    previews, and each time 256×256 pixels were redrawn.
+
+- **Recovering an unsaved document no longer asks before the window appears.**
+  The question was raised from the constructor, and a modal dialog blocks: the
+  dialog appeared *before* the program window, which read as a slow start. It is
+  now raised on the first turn of the event loop, over a window that is already
+  on screen. Opening a document — from the menu or from the command line — still
+  takes precedence: recovery is not offered in its place.
+
+- **Listing the available fonts happens once per session.** Enumerating the
+  system's fonts opens each of them with MuPDF to see whether it has Latin
+  letters, which is about 100 ms on a machine with the usual font set. The
+  signature dialog asked for the list twice (the list itself and the default
+  font, which needs it), and every typed signature whose path was missing asked
+  for it again. `typed.svuota_cache_font()` re-reads them after installing a new
+  font while the program is open.
+
+### Fixed
+
+- **The preferences file was rewritten during start-up.** Reading the recent
+  files — which happens while the menus are being built — checked each entry
+  and, if one had been deleted in the meantime, wrote the whole JSON back to
+  disk before the window appeared. The cleanup is now kept in memory and saved
+  with the next save, which happens when the program closes anyway.
+
+- **A MuPDF setting that could never take effect.** Start-up asked for a 200 MB
+  internal store limit with `TOOLS.store_size(...)`. In PyMuPDF 1.28 both
+  `store_size` and `store_maxsize` are getters that return `None` and have no
+  setter, so the limit was not merely unapplied, it was inexpressible. The call
+  raised `TypeError`, which the surrounding `except` swallowed, and the line
+  looked like it worked.
+
+- **`QT_ENABLE_HIGHDPI_SCALING` and `QT_AUTO_SCREEN_SCALE_FACTOR` were set for
+  Qt 5.** Both are no-ops since Qt 6, where high-DPI scaling is always on. They
+  stayed in the code making it look as though removing them would blur the
+  interface.
+
+- **`SignatureLibrary` created its folder three times per operation.** The path
+  of the index was recomputed on every `load` and `save` by comparing the folder
+  with `library_dir()`, and each comparison created the directory.
+
+### Added
+
+- `tools/bench_startup.py`, which prints the start-up phase by phase and reports
+  which third-party libraries the start-up pulls in. Start-up cost was an
+  opinion until there was a way to measure it, and a cost like this is invisible
+  in review: nobody sees one extra `import` at the top of a file and thinks
+  something got slower.
+
+- `tests/test_avvio.py`, which checks in a clean interpreter that the window
+  does not bring NumPy, Pillow or the dialog windows along with it, and that the
+  dialogs still open when they are imported lazily. Eleven of its checks fail
+  against the previous version: without them, any of these costs can come back
+  one `import` at a time, unnoticed.
+
 ## 0.1.1 — 2026-10-04
 
 A packaging fix. The program itself does not change: this release exists so

@@ -14,6 +14,90 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ## Non pubblicato
 
+### Cambiato
+
+- **Il programma parte sensibilmente più in fretta.** Misurato con
+  `tools/bench_startup.py` sulla macchina di riferimento, il tempo dal primo
+  atto del processo alla prima finestra dipinta scende di circa il 23% (da
+  circa 330 ms a circa 255 ms). Il guadagno sta in ciò che il programma carica
+  prima di potersi mostrare:
+  - **NumPy non si carica più all'avvio.** Da solo costa circa 70 ms ed entrava
+    da `signature.bgremove`, la rimozione dello sfondo di un'immagine di firma.
+    All'avvio quel modulo non lo tocca nessuno, ma `signature.manager` lo
+    importava per poter salvare un PNG. I moduli delle firme che servono solo
+    alla libreria delle firme salvate sono ora importati dai metaggi che li
+    usano.
+  - **Pillow non si carica più all'avvio.** Serviva solo per leggere e scrivere
+    le immagini delle firme.
+  - **Quasi duemila righe di finestre di dialogo non si importano più
+    all'avvio.** `dialogs/props.py` (circa 8 ms) e `signature_dialog.py`
+    (circa 5 ms) vengono importati dalle azioni che li aprono, come già
+    facevano `printing`, `ocr` e `thumbnails`.
+  - **Il catalogo inglese non si legge più all'import.** Il modulo finiva
+    applicando la lingua predefinita, e quindi leggeva e interpretava 36 KiB di
+    JSON prima che l'avvio potesse leggere la preferenza della lingua; a un
+    utente italiano quel lavoro finiva scartato, perché l'italiano è la lingua
+    del sorgente e non ha catalogo.
+  - **L'icona dell'applicazione viene disegnata una volta sola invece che a ogni
+    richiesta.** Il desktop la chiede più di una volta, per il riquadro, per il
+    menu e per le anteprime, e ogni volta erano 256×256 pixel da ridisegnare.
+
+- **Recuperare un documento non salvato non chiede più prima che la finestra
+  sia comparsa.** La domanda veniva posta dal costruttore, e una finestra
+  modale blocca: la domanda compariva *prima* della finestra del programma, e
+  si leggeva come un avvio lento. Ora arriva al primo giro del ciclo di eventi,
+  sopra una finestra già a schermo. Aprire un documento — dal menu o dalla riga
+  di comando — ha comunque la precedenza: il recupero non viene proposto al suo
+  posto.
+
+- **L'elenco dei font disponibili si fa una volta per sessione.** Enumerare i
+  font del sistema apre ognuno con MuPDF per vedere se ha le lettere latine:
+  sono circa 100 ms su una macchina con il set di font solito. La finestra
+  della firma chiedeva l'elenco due volte (l'elenco stesso e il font
+  predefinito, che lo richiede) e ogni firma digitata senza un percorso valido
+  lo chiedeva di nuovo. `typed.svuota_cache_font()` li rivede dopo aver
+  installato un font a programma aperto.
+
+### Corretto
+
+- **Il file delle preferenze veniva riscritto durante l'avvio.** Leggere i file
+  recenti — che avviene mentre i menu si costruiscono — controllava ogni voce e,
+  se qualcuna era stata cancellata nel frattempo, riscriveva tutto il JSON su
+  disco prima che la finestra comparisse. Ora la pulizia resta in memoria e
+  viene salvata con il salvataggio successivo, che avviene comunque alla
+  chiusura.
+
+- **Un'impostazione di MuPDF che non poteva mai entrare in vigore.** All'avvio
+  si chiedeva un limite di 200 MiB per il deposito interno con
+  `TOOLS.store_size(...)`. In PyMuPDF 1.28 sia `store_size` sia `store_maxsize`
+  sono getter che restituiscono `None` e non hanno un setter, quindi quel
+  limite non era solo non applicato, era proprio inexpressibile. La chiamata
+  sollevava `TypeError`, che l'`except` intorno accettava in silenzio, e la riga
+  sembrava funzionare.
+
+- **`QT_ENABLE_HIGHDPI_SCALING` e `QT_AUTO_SCREEN_SCALE_FACTOR` erano
+  impostate per Qt 5.** Entrambe non fanno niente da Qt 6, dove lo schermo ad
+  alta risoluzione è attivo di serie. Erano rimaste nel codice e facevano
+  credere che toglierle avrebbe sfocato l'interfaccia.
+
+- **`SignatureLibrary` creava la sua cartella tre volte per operazione.** Il
+  percorso dell'indice veniva ricalcolato a ogni `load` e `save` confrontando la
+  cartella con `library_dir()`, e ogni confronto creava la directory.
+
+### Aggiunto
+
+- `tools/bench_startup.py`, che stampa l'avvio fase per fase e dice quali
+  librerie di terze parti si porta dietro. Il costo dell'avvio era un'opinione
+  finché non c'è stato un modo per misurarlo, e un costo così non si vede in
+  revisione: nessuno guarda un `import` in più in cima a un file e pensa che
+  qualcosa sia diventato più lento.
+
+- `tests/test_avvio.py`, che in un interprete pulito verifica che la finestra
+  non si porti dietro NumPy, Pillow o le finestre di dialogo, e che i dialoghi
+  si aprano ugualmente con l'import pigro. Undici dei suoi controlli falliscono
+  sulla versione precedente: senza di essi, qualunque di questi costi può
+  tornare un import alla volta, senza che nessuno se ne accorga.
+
 ## 0.1.1 — 2026-10-04
 
 Correzione alla compilazione. Il programma in sé non cambia: questa versione

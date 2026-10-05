@@ -74,12 +74,14 @@ tests/
   test_interazione.py  eventi reali sulla finestra
   test_funzionalita.py ogni funzionalità, una per una
   test_dialoghi.py     ogni dialogo si apre e sta nello schermo
+  test_avvio.py        cosa carica l'avvio, e cosa non deve caricare
   conftest.py          fixture condivise
   integration.py       flussi completi
   finale.py            collaudo
   visual.py            catture dell'interfaccia
 tools/
   make_icons.py        genera le icone (non sono nel repository)
+  bench_startup.py     misura l'avvio, fase per fase
 resources/
   korvaxoide-pdf-editor.desktop   voce per il menu delle applicazioni
 ```
@@ -281,6 +283,57 @@ dipendenza dichiarata deve comparire fra gli import di `pdfeditor/`. E le
 dipendenze facoltative (scipy, per la rimozione dello sfondo) si dichiarano
 come facoltative, non come requisite.
 
+### Ciò che l'avvio carica è ciò che l'avvio paga
+
+Gli import in cima a un modulo sembrano gratis e non lo sono. Si pagano a ogni
+avvio, da ogni utente, che quel codice arrivi o no a essere usato.
+
+L'avvio importava NumPy (circa 70 ms, da solo) perché `signature.bgremove` lo
+importa, e a `bgremove` si arrivava perché `signature.manager` lo aveva bisogno
+per salvare un PNG. `manager` viene costruito all'avvio solo per contare le firme
+salvate e non disegna niente. Importava inoltre quasi duemila righe di finestre
+di dialogo, che l'utente può non aprire mai.
+
+Ne seguono tre regole, e `tests/test_avvio.py` le verifica tutte e tre in un
+interprete pulito:
+
+1. **Un modulo che serve solo quando l'utente chiede qualcosa importa le sue
+   dipendenze pesanti dentro la funzione che le usa.** `printing`, `ocr` e
+   `thumbnails` funzionavano già così. Vale per tutto quello che è nuovo.
+2. **Le annotazioni non costano nulla.** Con `from __future__ import
+   annotations` un tipo resta una stringa finché qualcuno non lo chiede, quindi
+   un blocco `TYPE_CHECKING` lascia i nomi leggibili a persone e controllori
+   senza importare niente:
+
+   ```python
+   if TYPE_CHECKING:
+       from PIL import Image
+
+       from .dialogs import props
+   ```
+3. **Si mette in cache ciò che ricalcolare è caro, e si restituiscono copie.**
+   Enumerare i font del sistema apre ogni font con MuPDF per guardare le sue
+   lettere: circa 100 ms. Ora si calcola una volta sola e `list_fonts()` consegna
+   copie, così un chiamante che modifica una voce non scrive dentro la cache.
+   Quando la cosa messa in cache può cambiare durante una sessione, si espone
+   una funzione che la svuota.
+
+Due cose che sembrano ottimizzazioni non lo sono, e sono state misurate prima di
+lasciarle stare: `theme.stylesheet()` costa 6 microsecondi (i 10 ms di temiatura
+sono Qt che interpreta il CSS, che nessuna cache evita), e togliere l'import
+prematuro di `pymupdf` dall'avvio lo rende *più* lento, perché PyMuPDF e Qt
+condividono librerie native e chi arriva prima le tiene residenti per l'altro.
+
+Si misura prima di cambiare, e si misura per confronto:
+
+```bash
+./venv/bin/python -m tools.bench_startup        # le fasi, e cosa è stato caricato
+```
+
+Su una macchina altrimenti libera, confrontando due versioni nella stessa
+finestra di tempo e alternandole: quasi mai la macchina è abbastanza tranquilla
+da rendere confrontabili due misure prese a pochi minuti di distanza.
+
 ### Spostare un'immagine non è cancellarla e reinserirla
 
 `Document.move_image` rilegge l'immagine e la reinserisce, perché le immagini
@@ -323,6 +376,7 @@ i colori fissi sul tema chiaro restavano bianche anche a tema scuro.
 ./venv/bin/python -m pytest tests/test_funzionalita.py -q
 ./venv/bin/python -m pytest tests/test_dialoghi.py -q
 ./venv/bin/python -m pytest tests/test_interazione.py -q
+./venv/bin/python -m pytest tests/test_avvio.py -q
 ./venv/bin/python -m pytest tests/test_documentazione.py -q
 ./venv/bin/python tests/integration.py
 ./venv/bin/python tests/finale.py
@@ -394,6 +448,8 @@ quindi prendono font e cartelle da `ambiente`.
 | `test_interazione.py` | clic, tastiera e scorciatoie vere |
 | `test_funzionalita.py` | ogni funzionalità, una alla volta |
 | `test_dialoghi.py` | ogni dialogo si apre e sta nello schermo |
+| `test_avvio.py` | cosa carica l'avvio, e cosa non deve caricare |
+
 | `test_regressioni.py` | i difetti trovati esaminando il motore voce per voce |
 | `test_regressioni_ui.py` | gli stessi difetti, con eventi veri del mouse |
 | `test_documentazione.py` | collegamenti, ancore e file che i documenti citano |

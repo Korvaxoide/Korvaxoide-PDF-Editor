@@ -7,21 +7,44 @@ import sys
 from pathlib import Path
 
 
+def _precarica_pymupdf() -> None:
+    """Carica MuPDF prima di Qt, per una ragione che vale la pena conoscere.
+
+    L'ordine delle due import non è indifferente. PyMuPDF e Qt caricano
+    librerie native in comune — FreeType, HarfBuzz, libjpeg, zlib — e chi arriva
+    primo le tiene residenti per l'altro: importando MuPDF prima di PySide6 si
+    guadagna una decina di millisecondi rispetto all'ordine opposto, misurato
+    e non supposto (``tools/bench_startup.py``).
+
+    MuPDF verrebbe importato comunque un attimo dopo, da ``core.document``, ma
+    importing qui nel mezzo si sceglie l'ordine invece di subirlo.
+
+    Qui prima c'era anche ``TOOLS.store_shrink(100)`` e
+    ``TOOLS.store_size(200 * 1024 * 1024)``. La seconda chiamata non poteva
+    funzionare: in PyMuPDF 1.28 ``store_size`` e ``store_maxsize`` sono
+    **getter** che restituiscono ``None`` e non hanno un setter, quindi quel
+    limite di 200 MiB non era solo non applicato, era proprio inexpressibile.
+    Sollevavano ``TypeError``, il ``except`` se lo accettava in silenzio e la
+    riga sembrava lavorare. Neppure ``store_shrink(100)`` serviva: il deposito
+    di MuPDF è vuoto in un processo che non ha ancora aperto un documento.
+    Se un giorno quel limite servirà davvero, va impostato dove si apre un
+    documento.
+    """
+    try:
+        import pymupdf  # noqa: F401
+    except Exception:
+        # Senza MuPDF il programma non parte, ma è `core.document` a dirlo con
+        # un messaggio suo: qui non si deve coprire un errore che non c'è.
+        pass
+
+
 def _prepare_environment() -> None:
-    """Impostazioni d'ambiente per Qt e per i plugin di PyMuPDF."""
-    os.environ.setdefault("QT_ENABLE_HIGHDPI_SCALING", "1")
-    os.environ.setdefault("QT_AUTO_SCREEN_SCALE_FACTOR", "1")
+    """Impostazioni d'ambiente per Qt, prima che Qt venga importato."""
     if sys.platform.startswith("linux"):
         # Wayland senza supporto: si ripiega su X11, altrimenti Qt non parte.
         if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
             os.environ["QT_QPA_PLATFORM"] = "offscreen"
-    try:
-        import pymupdf
-
-        pymupdf.TOOLS.store_shrink(100)
-        pymupdf.TOOLS.store_size(200 * 1024 * 1024)
-    except Exception:
-        pass
+    _precarica_pymupdf()
 
 
 #: I traduttori installati. Qt li cerca in ordine di installazione, quindi
