@@ -12,12 +12,22 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
-
-from PIL import Image
+from typing import TYPE_CHECKING, Any
 
 from ..core.settings import data_dir
-from . import bgremove, render, strokes as sk, typed
+
+# Pillow, NumPy e i moduli che disegnano e misurano le firme sono importati
+# dentro i metaggi che li usano, non qui in cima. La libreria viene costruita
+# all'avvio solo per sapere quante firme ci sono, e `SignatureLibrary()` non
+# disegna niente: importando qui finiva che NumPy (che da solo costa circa
+# 70 ms) entrava in ogni avvio del programma per servire un modulo che nessuno
+# apre. Le annotazioni restano sotto, per chi le deve leggere: con
+# `from __future__ import annotations` sono stringhe a runtime e non costano
+# niente.
+if TYPE_CHECKING:
+    from PIL import Image
+
+    from . import bgremove, render, strokes as sk, typed
 
 
 def library_dir() -> Path:
@@ -32,10 +42,6 @@ def library_dir() -> Path:
             "La libreria non è raggiungibile."
         ) from exc
     return d
-
-
-def index_path() -> Path:
-    return library_dir() / "index.json"
 
 
 class SignatureLibraryError(Exception):
@@ -70,13 +76,19 @@ class SignatureLibrary:
     def __init__(self, folder: Path | None = None) -> None:
         self.folder = folder or library_dir()
         self.folder.mkdir(parents=True, exist_ok=True)
+        # Il percorso dell'indice si calcola una volta sola. Prima `load` e
+        # `save` lo decidevano ogni volta confrontando la cartella con
+        # `library_dir()`, e ogni confronto creava la cartella: all'avvio, con
+        # la libreria vuota, erano tre `mkdir` e tre chiamate al filesystem per
+        # arrivare alla stessa identica risposta.
+        self.index_file = self.folder / "index.json"
         self.entries: list[SignatureEntry] = []
         self.load()
 
     # ------------------------------------------------------------- persistenza
 
     def load(self) -> None:
-        p = index_path() if self.folder == library_dir() else self.folder / "index.json"
+        p = self.index_file
         self.entries = []
         if not p.exists():
             return
@@ -107,9 +119,8 @@ class SignatureLibrary:
         ]
 
     def save(self) -> None:
-        p = index_path() if self.folder == library_dir() else self.folder / "index.json"
         try:
-            p.write_text(
+            self.index_file.write_text(
                 json.dumps([asdict(e) for e in self.entries], indent=2, ensure_ascii=False),
                 encoding="utf-8",
             )
@@ -145,6 +156,8 @@ class SignatureLibrary:
         self, canvas: sk.SignatureCanvas, name: str = "", scale: float = 2.0
     ) -> SignatureEntry:
         """Salva una firma disegnata, conservando anche i tratti vettoriali."""
+        from . import render
+
         img = render.render_strokes(canvas, scale=scale)
         entry = self.add_png(
             img,
@@ -166,6 +179,8 @@ class SignatureLibrary:
 
     def add_typed(self, text: str, style: typed.TypedStyle, name: str = "") -> SignatureEntry:
         """Salva una firma digitata con la tastiera."""
+        from . import typed
+
         img = typed.render_typed(text, style)
         entry = self.add_png(
             img,
@@ -180,6 +195,8 @@ class SignatureLibrary:
         return entry
 
     def image(self, entry: SignatureEntry) -> Image.Image | None:
+        from PIL import Image
+
         p = self.folder / entry.data_file
         if not p.exists():
             return None
@@ -192,6 +209,8 @@ class SignatureLibrary:
         """Ricostruisce i tratti vettoriali di una firma disegnata."""
         if not entry.strokes_file:
             return None
+        from . import strokes as sk
+
         p = self.folder / entry.strokes_file
         if not p.exists():
             return None
@@ -201,6 +220,8 @@ class SignatureLibrary:
             return None
 
     def bytes(self, entry: SignatureEntry) -> bytes:
+        from . import render
+
         img = self.image(entry)
         return render.to_png(img) if img else b""
 
@@ -241,4 +262,6 @@ def prepare_image(
     image: Image.Image, settings: bgremove.RemovalSettings | None = None
 ) -> Image.Image:
     """Applica la rimozione dello sfondo a un'immagine importata dall'utente."""
+    from . import bgremove
+
     return bgremove.remove_background(image, settings or bgremove.RemovalSettings())

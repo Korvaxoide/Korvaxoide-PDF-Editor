@@ -47,7 +47,7 @@ LINGUE_CON_CATALOGO: tuple[str, ...] = ("en",)
 #: La lingua del sistema, quando non e' riconosciuta.
 LINGUA_PREDEFINITA = "en"
 
-_corrente = "it"
+_corrente = LINGUA_PREDEFINITA
 _catalogo: dict[str, str] = {}
 _lingua_di_sistema = ""
 
@@ -97,6 +97,22 @@ def _applica(codice: str) -> None:
     global _corrente, _catalogo
     _corrente = codice
     _catalogo = _carica(codice) if codice in LINGUE_CON_CATALOGO else {}
+
+
+def _catalogo_pronto() -> None:
+    """Il catalogo della lingua corrente, se non è ancora in memoria.
+
+    Si chiama solo se qualcuno traduce *prima* che l'avvio abbia scelto la
+    lingua, cioè da un programma che usa `i18n` senza passare da `app.run`. La
+    lingua resta quella predefinita e il catalogo le appartiene: senza questo,
+    un `tr()` di troppo su un'interfaccia mai avviata restituirebbe l'italiano
+    anche se la lingua corrente fosse l'inglese.
+    """
+    global _catalogo
+    if _catalogo:
+        return
+    if _corrente in LINGUE_CON_CATALOGO:
+        _catalogo = _carica(_corrente)
 
 
 # ------------------------------------------------------------- rilevamento
@@ -206,7 +222,9 @@ def tr(testo: str) -> str:
     in italiano.
     """
     if not _catalogo:
-        return testo
+        _catalogo_pronto()
+        if not _catalogo:
+            return testo
     return _catalogo.get(testo, testo)
 
 
@@ -217,7 +235,16 @@ def esiste(testo: str) -> bool:
     occhio, e una chiave dimenticata si vede solo in inglese, dove il lettore
     non ha nulla su cui confrontarla.
     """
+    _catalogo_pronto()
     return testo in _catalogo
 
 
-_applica(LINGUA_PREDEFINITA)
+# Qui sotto non c'è più la chiamata a `_applica(LINGUA_PREDEFINITA)` che c'era
+# prima, e il motivo è l'avvio. Caricava il catalogo inglese — 36 KiB di JSON
+# letti e interpretati — prima ancora che l'avvio leggesse la preferenza della
+# lingua, e per un utente italiano quel lavoro finiva subito scartato: la lingua
+# di sistema o la scelta esplicita sono «it», e l'italiano non ha catalogo. Il
+# modulo si limitava quindi a dichiarare una lingua che nessuno aveva ancora
+# deciso. Ora la lingua parte da `LINGUA_PREDEFINITA` e il catalogo arriva con
+# `set_lingua`, che è l'unica a sapere cosa l'utente ha scelto; `tr` lo chiede
+# in prestito se qualcuno traduce senza essere passato dall'avvio.

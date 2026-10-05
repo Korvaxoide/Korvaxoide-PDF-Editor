@@ -24,6 +24,11 @@ from PySide6.QtGui import (
 
 Cache: dict[tuple[str, str, int], QIcon] = {}
 
+#: L'icona dell'applicazione ha una cache tutta sua, perche' dipende solo dalla
+#: dimensione e non dal colore come le altre. Non sta in `Cache` per non mescolare
+#: due chiavi di forma diversa.
+AppIconCache: dict[int, QIcon] = {}
+
 
 def _pen(p: QPainter, color: str, width: float = 1.6) -> None:
     p.setPen(QPen(QColor(color), width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
@@ -945,7 +950,16 @@ def icon(name: str, color: str = "#2b303a", size: int = 22) -> QIcon:
 
 
 def app_icon(size: int = 256) -> QIcon:
-    """Icona dell'applicazione: foglio con penna stilografica."""
+    """Icona dell'applicazione: foglio con penna stilografica.
+
+    E' l'unica che non passava da `icon()` e quindi non aveva cache: veniva
+    ridisegnata a ogni chiamata, e il desktop la chiede piu' volte per le
+    dimensioni diverse del riquadro, del menu del programma e delle anteprime.
+    Sono 256×256 pixel ridisegnati ogni volta, circa 2 ms.
+    """
+    hit = AppIconCache.get(size)
+    if hit is not None:
+        return hit
     pm = QPixmap(size, size)
     pm.fill(Qt.transparent)
     p = QPainter(pm)
@@ -974,7 +988,9 @@ def app_icon(size: int = 256) -> QIcon:
     p.setBrush(QBrush(QColor("#ffffff")))
     p.drawEllipse(QPointF(s * 0.8, s * 0.3), s * 0.03, s * 0.03)
     p.end()
-    return QIcon(pm)
+    icona = QIcon(pm)
+    AppIconCache[size] = icona
+    return icona
 
 
 def pixmap(name: str, color: str = "#2b303a", size: int = 22) -> QPixmap:

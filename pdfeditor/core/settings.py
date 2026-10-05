@@ -120,10 +120,20 @@ class Settings:
         self.set("recent_files", recent[: int(self.get("max_recent", 12))])
 
     def recent_files(self) -> list[str]:
-        """File recenti ancora esistenti, ripulendo quelli spariti."""
+        """File recenti ancora esistenti, ripulendo quelli spariti.
+
+        Gli ingressi piu' vecchi di file gia' spariti non hanno senso e vengono
+        tolti, ma la pulizia resta in memoria e viene scritta con il prossimo
+        salvataggio. Prima scriveva qui, e questa funzione viene chiamata mentre
+        si costruiscono i menu, cioe' nel mezzo dell'avvio: dodici controlli
+        `exists` e una riscrittura del JSON sul disco prima che la finestra sia
+        comparsa. Il salvataggio alla chiusura scrive comunque tutto il
+        dizionario, quindi la pulizia non si perde, e aprendo un file viene
+        riscritta lo stesso da `add_recent`.
+        """
         files = [r for r in self.get("recent_files", []) if Path(r).exists()]
         if len(files) != len(self.get("recent_files", [])):
-            self.set("recent_files", files)
+            self._data["recent_files"] = files
         return files
 
     def clear_recent(self) -> None:
