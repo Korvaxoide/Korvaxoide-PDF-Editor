@@ -541,7 +541,13 @@ position, joining the blocks of the same line.
    portable folder instead: publish that only if you mean to, because it is not
    what people download.
 7. Update the licences list in `THIRD-PARTY.md`.
-8. Update `CHANGELOG.md` with what changed in this version.
+8. Update `CHANGELOG.md`: rename the `## Unreleased` heading to
+   `## <version> — <date>` and put a fresh empty `## Unreleased` above it. The
+   entries have been accumulating under `Unreleased` since the day they were
+   written, so this step is a rename and a date, not a writing session. Do the
+   same in `docs/it/CHANGELOG.md`, where the heading reads `## Non pubblicato`.
+   A test checks that the changelog has a heading for the current
+   `__version__`, so step 2 and this one cannot get out of step.
 9. Commit with a message that explains the cause, not only the symptom.
 10. Tag the release: `git tag -a v0.1.0 -m "Korvaxoide PDF Editor 0.1.0"`, then
     push the tag. The tag is what makes the AGPL source obligation easy to

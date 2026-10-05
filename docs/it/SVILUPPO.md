@@ -540,8 +540,17 @@ posizione, unendo i blocchi della stessa riga.
    cartella portatile: pubblicala solo se è quello che vuoi, perché non è ciò
    che scarica la gente.
 7. Aggiornare l'elenco delle licenze in `THIRD-PARTY.md`.
-8. Commit con un messaggio che spieghi la causa, non solo il sintomo.
-9. Tag git con la versione: `git tag -a v0.1.0 -m "Korvaxoide PDF Editor 0.1.0"`.
+8. Aggiornare `CHANGELOG.md`: rinominare l'intestazione `## Non pubblicato` in
+   `## <versione> — <data>` e rimetterne una vuota e nuova sopra. Le voci si
+   accumulano li` dal giorno in cui sono state scritte, quindi questo passo e`
+   un rinominare e una data, non una sessione di scrittura. Lo stesso in
+   `docs/it/CHANGELOG.md`, dove l'intestazione si chiama `## Non pubblicato`. Un
+   controllo verifica che il registro abbia l'intestazione della versione
+   corrente, quindi il passo 2 e questo non possono andare staccati.
+9. Commit con un messaggio che spieghi la causa, non solo il sintomo.
+10. Tag git con la versione: `git tag -a v0.1.0 -m "Korvaxoide PDF Editor 0.1.0"`.
+    Il tag e` quello che rende facile rispettare l'obbligo di sorgente dell'AGPL:
+    la pagina del rilascio offre il sorgente corrispondente con un clic.
 
 La versione `0.1.0` è la prima numerata: prima della versione era `1.0.0` di
 default e non voleva dire niente, perché il programma non era mai stato
