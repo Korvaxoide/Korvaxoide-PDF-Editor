@@ -18,8 +18,9 @@ the *About* window all read it from there.
 
 - **The program starts noticeably faster.** Measured with
   `tools/bench_startup.py` on the reference machine, the time from the first
-  instruction to the first painted window drops by about 23% (from roughly
-  330 ms to roughly 255 ms). The gains are in what the program loads before it
+  instruction to the first painted window drops by about 27% (from roughly
+  340 ms to roughly 250 ms), measured over eight alternating pairs of runs. The
+  gains are in what the program loads before it
   can show itself:
   - **NumPy no longer loads at start-up.** It costs about 70 ms on its own and
     entered through `signature.bgremove`, the background removal of a signature

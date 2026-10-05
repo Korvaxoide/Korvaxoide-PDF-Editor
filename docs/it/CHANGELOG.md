@@ -18,8 +18,9 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 - **Il programma parte sensibilmente più in fretta.** Misurato con
   `tools/bench_startup.py` sulla macchina di riferimento, il tempo dal primo
-  atto del processo alla prima finestra dipinta scende di circa il 23% (da
-  circa 330 ms a circa 255 ms). Il guadagno sta in ciò che il programma carica
+  atto del processo alla prima finestra dipinta scende di circa il 27% (da
+  circa 340 ms a circa 250 ms), misurato su otto coppie alternate di esecuzioni.
+  Il guadagno sta in ciò che il programma carica
   prima di potersi mostrare:
   - **NumPy non si carica più all'avvio.** Da solo costa circa 70 ms ed entrava
     da `signature.bgremove`, la rimozione dello sfondo di un'immagine di firma.
