@@ -87,6 +87,28 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ### Aggiunto
 
+- **Trasformare un mucchio di fotografie in un PDF è diventato un dialogo
+  tutto suo.** *File ▸ Converti immagini in PDF…* sostituisce *File ▸ Importa
+  da immagini…*, che prendeva una selezione multipla, faceva una pagina per
+  immagine nell'ordine in cui il gestore file le elencava e poi sostituiva il
+  documento aperto senza scrivere nessun file. Il nuovo permette di scegliere
+  le immagini, vederle in miniatura, metterle in ordine — a mano, con *Sposta
+  su* e *Sposta giù*, oppure ordinate per nome o per data — e di decidere come
+  finiscono in pagina: formato carta o forma della foto, orientamento, se la
+  foto si vede intera, se riempie la pagina e viene tagliata, o se viene
+  stampata alla sua dimensione reale, i margini, e quante immagini stanno in
+  ogni pagina. Una riga sotto le opzioni dice quante pagine verranno fuori. Il
+  PDF viene scritto dove si sceglie e poi aperto, e se il documento che era
+  aperto aveva modifiche non salvate chiede prima di sostituirlo. Le fotografie
+  non vengono ricompresse: MuPDF lascia un JPEG com'è lo stesso JPEG, quindi
+  una foto da dodici megapixel costa circa quanto il file da cui viene, e
+  convertirla richiede circa un decimo di secondo.
+
+  La disposizione sta in un punto solo, `Document._images_document()`, e anche
+  l'apertura di una singola immagine ci passa ora. Quel percorso continua a
+  fare la cosa ovvia — una pagina, della forma della foto, che la riempie —,
+  che è quello che faceva anche prima.
+
 - `tools/bench_startup.py`, che stampa l'avvio fase per fase e dice quali
   librerie di terze parti si porta dietro. Il costo dell'avvio era un'opinione
   finché non c'è stato un modo per misurarlo, e un costo così non si vede in

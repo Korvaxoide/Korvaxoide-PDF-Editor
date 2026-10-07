@@ -17,6 +17,7 @@ di memoria supera il budget impostato.
 from __future__ import annotations
 
 import io
+import math
 import os
 import re
 import shutil
@@ -36,6 +37,15 @@ from .history import Command, HistoryStack
 
 MIB = 1024 * 1024
 UNDO_BUDGET = 220 * MIB
+
+# come un'immagine viene adattata alla cella che le e' stata assegnata:
+# tutto dentro, tutto dentro ma tagliando la parte eccedente, o senza
+# ridimensionarla. Sono chiavi, non nomi da mostrare: le traduzioni stanno
+# nel dialogo, che le accoppia a questo elenco.
+ADATTAMENTI = ("pagina", "piena", "originale")
+
+# tetto alla griglia: oltre, le immagini diventano francobolli illeggibili
+MAX_IMMAGINI_PER_PAGINA = 12
 
 
 class DocumentError(Exception):
@@ -440,18 +450,17 @@ class Document:
         self.events.emit("dirty", True)
 
     def open_images(self, paths: Sequence[str | os.PathLike[str]]) -> None:
-        """Crea un PDF da una o piu immagini, una per pagina."""
-        doc = pymupdf.open()
-        for p in paths:
-            img = pymupdf.open(str(p))
-            rect = img.load_page(0).rect
-            pdf_bytes = img.convert_to_pdf()
-            img.close()
-            src = pymupdf.open("pdf", pdf_bytes)
-            page = doc.new_page(width=rect.width, height=rect.height)
-            page.show_pdf_page(page.rect, src, 0)
-            src.close()
-        self._adopt(doc)
+        """Crea un PDF da una o piu immagini, una per pagina.
+
+        La pagina prende la forma dell'immagine e l'immagine la riempie: e' il
+        comportamento di «apri un'immagine», e non quello di «converti in PDF»,
+        che ha pagina, margini e ordinamento scelti. Le due cose passano pero'
+        dallo stesso calcolo di disposizione.
+        """
+        self._adopt(
+            self._images_document(paths, page="immagine", fit="originale",
+                                  margin=0.0, per_page=1, dpi=72.0)
+        )
         self.path = None
         self.dirty = True
         self._was_encrypted = False
@@ -2523,6 +2532,90 @@ class Document:
 
     # -------------------------------------------------------------------- immagini
 
+    def images_to_pdf(
+        self,
+        path: str | os.PathLike[str],
+        paths: Sequence[str | os.PathLike[str]],
+        *,
+        page: str = "A4",
+        orientation: str = "verticale",
+        fit: str = "pagina",
+        margin: float = 18.0,
+        per_page: int = 1,
+        dpi: float = 150.0,
+    ) -> Path:
+        """Scrive un PDF nuovo con le immagini indicate e ne restituisce il percorso.
+
+        Il documento aperto non viene toccato: la conversione produce un file a
+        se' e chi la chiama decide se aprirlo.
+
+        - ``page``: un formato di ``units.PAGE_SIZES`` oppure «immagine», nel
+          qual caso la pagina ha la forma della prima foto che ci finisce
+          sopra, alla risoluzione data;
+        - ``orientation``: «verticale» oppure «orizzontale», scambia i due lati
+          del foglio. Con «immagine» non gira nulla: ruotare la pagina
+          cambierebbe la forma attesa dall'immagine;
+        - ``fit``: «pagina» per vedere tutto, «piena» per riempire la cella
+          tagliando la parte eccedente, «originale» per non ridimensionare;
+        - ``per_page``: quante immagini in una pagina, disposte in griglia.
+        """
+        out = self._images_document(paths, page=page, orientation=orientation,
+                                    fit=fit, margin=margin, per_page=per_page, dpi=dpi)
+        target = Path(path)
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            out.save(str(target), garbage=3, deflate=True)
+        except Exception as exc:
+            raise DocumentError(
+                tr("Salvataggio del PDF non riuscito: {errore}").format(errore=exc)
+            ) from exc
+        finally:
+            out.close()
+        return target
+
+    def _images_document(
+        self,
+        paths: Sequence[str | os.PathLike[str]],
+        *,
+        page: str = "A4",
+        orientation: str = "verticale",
+        fit: str = "pagina",
+        margin: float = 18.0,
+        per_page: int = 1,
+        dpi: float = 150.0,
+    ) -> pymupdf.Document:
+        """Compone il PDF delle immagini: una pagina o una griglia per pagina."""
+        if not paths:
+            raise DocumentError(tr("Nessuna immagine da convertire in PDF."))
+        if fit not in ADATTAMENTI:
+            fit = ADATTAMENTI[0]
+        # oltre una griglia 3x4 le immagini diventano francobolli: si lascia
+        # comunque decidere al chiamante, ma con un tetto sotto cui il foglio
+        # resta leggibile invece di diventare una tabelle di miniature illeggibili
+        per_page = max(1, min(int(per_page), MAX_IMMAGINI_PER_PAGINA))
+        margine = max(0.0, float(margin))
+        risoluzione = max(1.0, float(dpi))
+        misure: list[tuple[Path, tuple[int, int]]] = []
+        for p in paths:
+            f = Path(p)
+            size = _image_size(str(f))
+            if not size or size[0] <= 0 or size[1] <= 0:
+                raise DocumentError(tr("Immagine non leggibile: {file}").format(file=f))
+            misure.append((f, size))
+        out = pymupdf.open()
+        for i in range(0, len(misure), per_page):
+            # con «immagine» il foglio prende la forma della prima foto che ci
+            # finisce sopra, non di tutta la conversione: e' il comportamento
+            # di «apri un'immagine», dove ogni pagina ha la forma della sua
+            # foto, e in un mosaico non avrebbe senso decidere quale sia la
+            # forma giusta fra tante diverse
+            larghezza, altezza = _page_size(page, misure[i][1], risoluzione, orientation, margine)
+            pagina = out.new_page(width=larghezza, height=altezza)
+            celle = _image_cells(larghezza, altezza, margine, per_page)
+            for slot, (f, misura) in enumerate(misure[i : i + per_page]):
+                _place_image(pagina, f, misura, celle[slot], fit, risoluzione)
+        return out
+
     def insert_image(
         self,
         page_index: int,
@@ -3873,6 +3966,117 @@ def _sottolinea_layout(
                 color=color, width=spessore, overlay=True,
             )
         y += passo
+
+
+def _page_size(
+    page: str,
+    first: tuple[int, int],
+    dpi: float,
+    orientation: str,
+    margin: float = 0.0,
+) -> tuple[float, float]:
+    """Dimensioni del foglio in punti, secondo il formato richiesto."""
+    if page != "immagine":
+        # un formato che non si conosce cade sul A4 e non su una pagina
+        # qualsiasi: il default del motore e' il default anche per gli usi
+        # sbagliati dell'API
+        w, h = units.PAGE_SIZES.get(page, units.PAGE_SIZES["A4"])
+        # sotto un formato gia' piu' largo che alto scambiare i lati
+        # rimpicciolirebbe il foglio invece di allargarlo
+        if orientation == "orizzontale" and h > w:
+            w, h = h, w
+        return w, h
+    # «immagine»: il foglio ha la forma della foto piu' i margini, e non viene
+    # ruotato perche' ruotarlo gli darebbe una forma che l'immagine non ha.
+    # I margini stanno dentro la pagina e non attorno: chiedere un bordo e
+    # ritrovarsi il foglio piu' grande, con l'immagine che non cambia, sarebbe
+    # un'opzione che sembra fare qualcosa e non fa niente
+    return first[0] * 72.0 / dpi + 2 * margin, first[1] * 72.0 / dpi + 2 * margin
+
+
+def _image_cells(width: float, height: float, margin: float, per_page: int) -> list[geo.Rect]:
+    """Le celle della griglia in cui disporre le immagini, dalla prima in alto."""
+    cols = math.ceil(math.sqrt(per_page))
+    rows = math.ceil(per_page / cols)
+    # il distacco fra una cella e l'altra e' meta' del margine: con il margine
+    # a zero anche il distacco e' zero e la griglia arriva al bordo del foglio
+    gap = margin / 2.0
+    cell_w = (width - 2 * margin - (cols - 1) * gap) / cols
+    cell_h = (height - 2 * margin - (rows - 1) * gap) / rows
+    return [
+        geo.Rect(
+            margin + c * (cell_w + gap),
+            margin + r * (cell_h + gap),
+            margin + c * (cell_w + gap) + cell_w,
+            margin + r * (cell_h + gap) + cell_h,
+        )
+        for r in range(rows)
+        for c in range(cols)
+    ]
+
+
+def _image_box(
+    cell: geo.Rect,
+    size: tuple[float, float],
+    fit: str,
+    dpi: float,
+) -> geo.Rect:
+    """Il riquadro in cui l'immagine va disegnata dentro la sua cella."""
+    w, h = size
+    ratio = (w / h) if w > 0 and h > 0 else 1.0
+    if fit == "originale":
+        # un pixel vale 1/dpi di pollice, e un pollice vale 72 punti: la
+        # grandezza di stampa dell'immagine dipende solo dai due numeri
+        larghezza = w * 72.0 / dpi
+        altezza = h * 72.0 / dpi
+    elif fit == "piena":
+        # la cella intera: il ritaglio di cio' che eccede e' a carico di
+        # chi chiama, sul documento di origine
+        return geo.Rect(cell)
+    else:
+        # «pagina»: l'immagine intera dentro la cella, proporzioni intatte
+        return geo.aspect_limited(cell, ratio)
+    cx, cy = (cell.x0 + cell.x1) / 2, (cell.y0 + cell.y1) / 2
+    return geo.Rect(cx - larghezza / 2, cy - altezza / 2, cx + larghezza / 2, cy + altezza / 2)
+
+
+def _place_image(
+    pagina: pymupdf.Page,
+    path: Path,
+    size: tuple[int, int],
+    cell: geo.Rect,
+    fit: str,
+    dpi: float,
+) -> None:
+    """Dispone un'immagine nella cella secondo l'adattamento richiesto."""
+    img = pymupdf.open(str(path))
+    try:
+        sorgente = pymupdf.open("pdf", img.convert_to_pdf())
+    finally:
+        img.close()
+    try:
+        src = sorgente.load_page(0).rect
+        clip = None
+        if fit == "piena" and src.width > 0 and src.height > 0:
+            # il ritaglio si misura nella pagina di origine e si fa li': un
+            # riquadro di destinazione piu' piccolo non avrebbe ritagliato
+            # niente, avrebbe stirato l'immagine
+            clip = _centered_crop(src.width, src.height, cell.width / cell.height)
+        pagina.show_pdf_page(_image_box(cell, size, fit, dpi),
+                             sorgente, 0, clip=clip, keep_proportion=False)
+    finally:
+        sorgente.close()
+
+
+def _centered_crop(width: float, height: float, ratio: float) -> geo.Rect:
+    """La parte centrale di un'immagine che ha il rapporto richiesto."""
+    if ratio <= 0 or width <= 0 or height <= 0:
+        return geo.Rect(0, 0, width, height)
+    if width / height > ratio:
+        w = height * ratio
+        return geo.Rect((width - w) / 2, 0, (width + w) / 2, height)
+    h = width / ratio
+    return geo.Rect(0, (height - h) / 2, width, (height + h) / 2)
 
 
 def _group_points(points: Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:

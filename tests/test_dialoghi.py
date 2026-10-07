@@ -74,6 +74,25 @@ def _esamina(nome, dlg):
     )
 
 
+def _con_piu_immagini(finestra):
+    """Il dialogo di conversione con delle immagini vere dentro.
+
+    Vuoto il dialogo non mostra miniature ne' riepilogo: sono le cose che
+    possono stare fuori dallo schermo o non aggiornarsi, e vanno provate con il
+    contenuto dentro.
+    """
+    import ambiente
+
+    from PIL import Image
+
+    scelte = []
+    for idx in range(3):
+        p = ambiente.cartella("immagini") / f"dialogo{idx}.png"
+        Image.new("RGB", (400, 300), (40 * idx, 80, 160)).save(p)
+        scelte.append(str(p))
+    return props.ImagesToPdfDialog(finestra, files=scelte)
+
+
 DIALOGHI = [
     ("TextBoxDialog", lambda w, d: props.TextBoxDialog(w, "helv", 12)),
     ("AnnotationStyleDialog", lambda w, d: props.AnnotationStyleDialog("rect", w)),
@@ -88,6 +107,8 @@ DIALOGHI = [
     ("PageNumberDialog", lambda w, d: props.PageNumberDialog(1, False, w)),
     ("SplitDialog", lambda w, d: props.SplitDialog(3, w)),
     ("MergeDialog", lambda w, d: props.MergeDialog(w)),
+    ("ImagesToPdfDialog vuoto", lambda w, d: props.ImagesToPdfDialog(w)),
+    ("ImagesToPdfDialog con foto", lambda w, d: _con_piu_immagini(w)),
     ("ExportDialog", lambda w, d: props.ExportDialog(1, w)),
     ("SignatureSetupDialog", lambda w, d: props.SignatureSetupDialog(d, 0, w)),
     ("PreferencesDialog", lambda w, d: props.PreferencesDialog(w.settings, w)),
@@ -140,6 +161,40 @@ def test_il_dialogo_firma_mostra_tutte_le_opzioni(finestra, documento):
                 assert posizione.y() + controllo.height() <= dlg.height(), (
                     f"controllo fuori dalla finestra sulla scheda «{dlg.tabs.tabText(scheda)}»"
                 )
+    finally:
+        dlg.close()
+        for _ in range(2):
+            QApplication.instance().processEvents()
+
+
+def test_il_dialogo_di_conversione_sta_nello_schermo_senza_scorrere(finestra, documento):
+    """Le opzioni di pagina non devono costringere il dialogo a scorrere.
+
+    Le sei coppie di opzioni erano in una fila sola: la larghezza minima del
+    dialogo superava lo schermo, ``adatta_a_schermo`` lo infilava in un'area
+    scorrevole e dentro quella area i pulsanti e le opzioni finivano schiacciati
+    a un pixel di altezza, irraggiungibili.
+    """
+    dlg = _con_piu_immagini(finestra)
+    try:
+        dlg.show()
+        for _ in range(6):
+            QApplication.instance().processEvents()
+        schermo = QApplication.instance().primaryScreen().availableGeometry()
+        minimo = dlg.minimumSizeHint()
+        assert minimo.width() <= schermo.width() * 0.94, (
+            f"il dialogo chiede {minimo.width()}px di larghezza su uno schermo "
+            f"di {schermo.width()}px"
+        )
+        assert not dlg.property("scroll_adattato"), (
+            "il dialogo si e' annidato in un'area scorrevole: le opzioni non sono raggiungibili"
+        )
+        # ogni controllo deve avere un'altezza reale, non un pixel
+        for controllo in (dlg.formato, dlg.orientamento, dlg.adattamento,
+                          dlg.margini, dlg.per_pagina, dlg.dpi):
+            assert controllo.height() >= 20, (
+                f"un controllo delle opzioni è alto {controllo.height()}px: non si può premere"
+            )
     finally:
         dlg.close()
         for _ in range(2):

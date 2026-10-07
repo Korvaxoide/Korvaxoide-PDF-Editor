@@ -9,6 +9,8 @@ preme un utente, e le finestre modali vengono chiuse automaticamente.
 
 from __future__ import annotations
 
+import pathlib
+
 import pymupdf
 import pytest
 from PySide6.QtCore import QPoint, QPointF, Qt, QTimer
@@ -1244,3 +1246,252 @@ def test_i_pulsanti_standard_seguono_la_lingua(finestra):
     # il pulsante OK e' identico nelle due lingue: serve a verificare che il
     # traduttore non sia stato tolto ma solo cambiato
     assert _pulsanti_standard("it") == italiano
+
+
+# ------------------------------------------------------- conversione da immagini
+
+
+def _tre_foto(cartella) -> list[str]:
+    """Tre immagini di prova con colori e nomi distinti."""
+    from PIL import Image
+
+    scelte = []
+    for nome, colore in (("zeta", (200, 0, 0)), ("alfa", (0, 200, 0)), ("media", (0, 0, 200))):
+        p = cartella / f"{nome}.png"
+        Image.new("RGB", (240, 180), colore).save(p)
+        scelte.append(str(p))
+    return scelte
+
+
+def _dialogo_conversione(finestra, scelte):
+    """Il dialogo vero, aperto e con le immagini gia' dentro."""
+    from pdfeditor.ui.dialogs import props
+
+    dlg = props.ImagesToPdfDialog(finestra, files=scelte)
+    dlg.show()
+    for _ in range(4):
+        QApplication.instance().processEvents()
+    return dlg
+
+
+def _pulsante(dlg, testo):
+    from PySide6.QtWidgets import QPushButton
+
+    for b in dlg.findChildren(QPushButton):
+        if b.text() == testo:
+            return b
+    raise AssertionError(f"pulsante «{testo}» non trovato")
+
+
+def test_il_dialogo_mostra_le_foto_scelte(finestra, tmp_path):
+    """Le immagini scelte devono comparire con la miniatura e la dimensione."""
+    scelte = _tre_foto(tmp_path)
+    dlg = _dialogo_conversione(finestra, scelte)
+    try:
+        assert dlg.list.count() == 3
+        assert dlg.images() == scelte, "l'ordine in cui sono state scelte non e' stato tenuto"
+        for i in range(3):
+            voce = dlg.list.item(i)
+            assert not voce.icon().isNull(), "manca la miniatura"
+            assert "240×180 px" in voce.text(), f"manca la dimensione: {voce.text()!r}"
+        assert "3 immagini" in dlg.riepilogo.text(), dlg.riepilogo.text()
+    finally:
+        dlg.close()
+
+
+def test_una_foto_scelta_due_volte_non_è_due_volte(finestra, tmp_path):
+    scelte = _tre_foto(tmp_path)
+    dlg = _dialogo_conversione(finestra, scelte)
+    try:
+        dlg._aggiungi(pathlib.Path(scelte[0]))
+        assert dlg.list.count() == 3, "la stessa immagine e' finita due volte in lista"
+    finally:
+        dlg.close()
+
+
+def test_rimuovi_e_svuota(finestra, tmp_path):
+    scelte = _tre_foto(tmp_path)
+    dlg = _dialogo_conversione(finestra, scelte)
+    try:
+        dlg.list.setCurrentRow(1)
+        _pulsante(dlg, "Rimuovi").click()
+        assert dlg.list.count() == 2
+        assert scelte[1] not in dlg.images()
+        _pulsante(dlg, "Svuota").click()
+        assert dlg.list.count() == 0
+        assert "0 immagini" in dlg.riepilogo.text()
+    finally:
+        dlg.close()
+
+
+def test_sposta_su_e_giù(finestra, tmp_path):
+    """I pulsanti devono spostare di un posto, tenendo l'ordine relativo."""
+    scelte = _tre_foto(tmp_path)
+    dlg = _dialogo_conversione(finestra, scelte)
+    try:
+        dlg.list.setCurrentRow(0)
+        _pulsante(dlg, "Sposta giù").click()
+        assert dlg.images() == [scelte[1], scelte[0], scelte[2]]
+        _pulsante(dlg, "Sposta su").click()
+        assert dlg.images() == scelte, "non e' tornata al posto di prima"
+        # la prima non puo' salire oltre la testa
+        dlg.list.setCurrentRow(0)
+        _pulsante(dlg, "Sposta su").click()
+        assert dlg.images() == scelte
+        dlg.list.setCurrentRow(2)
+        _pulsante(dlg, "Sposta giù").click()
+        assert dlg.images() == scelte
+    finally:
+        dlg.close()
+
+
+def test_sposta_due_voci_insieme(finestra, tmp_path):
+    """Con piu' voci selezionate lo spostamento non deve incrociare l'ordine."""
+    scelte = _tre_foto(tmp_path)
+    dlg = _dialogo_conversione(finestra, scelte)
+    try:
+        dlg.list.setCurrentRow(0)
+        dlg.list.item(1).setSelected(True)
+        _pulsante(dlg, "Sposta giù").click()
+        assert dlg.images() == [scelte[2], scelte[0], scelte[1]], (
+            f"ordine inatteso dopo lo spostamento: {dlg.images()}"
+        )
+    finally:
+        dlg.close()
+
+
+def test_ordina_per_nome(finestra, tmp_path):
+    scelte = _tre_foto(tmp_path)
+    dlg = _dialogo_conversione(finestra, scelte)
+    try:
+        _pulsante(dlg, "Ordina per nome").click()
+        assert [pathlib.Path(p).name for p in dlg.images()] == [
+            "alfa.png", "media.png", "zeta.png"
+        ]
+        # le voci devono restare selezionabili dopo il riordino
+        assert dlg.list.count() == 3
+        assert not dlg.list.item(0).icon().isNull()
+    finally:
+        dlg.close()
+
+
+def test_ordina_per_data(finestra, tmp_path):
+    scelte = _tre_foto(tmp_path)
+    # si scrive a mano la data di modifica: il file system puo' avere una
+    # risoluzione grossolana e i tre file risulterebbero identici
+    import os
+
+    for idx, p in enumerate(scelte):
+        os.utime(p, (1_700_000_000 + idx * 3600, 1_700_000_000 + idx * 3600))
+    dlg = _dialogo_conversione(finestra, scelte)
+    try:
+        _pulsante(dlg, "Ordina per data").click()
+        assert dlg.images() == list(reversed(scelte)), (
+            f"dal piu' recente al piu' vecchio, non ottenuto: {dlg.images()}"
+        )
+    finally:
+        dlg.close()
+
+
+def test_il_riepilogo_conta_le_pagine(finestra, tmp_path):
+    scelte = _tre_foto(tmp_path)
+    dlg = _dialogo_conversione(finestra, scelte)
+    try:
+        dlg.per_pagina.setValue(2)
+        assert "3 immagini in 2 pagine" in dlg.riepilogo.text(), dlg.riepilogo.text()
+        dlg.per_pagina.setValue(1)
+        assert "3 immagini in 3 pagine" in dlg.riepilogo.text(), dlg.riepilogo.text()
+    finally:
+        dlg.close()
+
+
+def test_le_opzioni_raccolte_arrivano_al_motore(finestra, tmp_path):
+    """I valori del dialogo devono essere quelli che il motore sa usare."""
+    from pdfeditor.core import units
+    from pdfeditor.core.document import ADATTAMENTI
+
+    scelte = _tre_foto(tmp_path)
+    dlg = _dialogo_conversione(finestra, scelte)
+    try:
+        valori = dlg.values()
+        assert valori["page"] == "A4", "il formato di default non e' il A4"
+        assert valori["per_page"] == 1 and valori["fit"] == "pagina"
+        assert abs(valori["margin"] - units.to_pt(1.0, "mm")) < 0.01
+
+        dlg.formato.setCurrentIndex(dlg.formato.findData("Letter"))
+        dlg.orientamento.setCurrentIndex(dlg.orientamento.findData("orizzontale"))
+        dlg.adattamento.setCurrentIndex(dlg.adattamento.findData("piena"))
+        dlg.margini.setValue(10.0)
+        dlg.per_pagina.setValue(4)
+        valori = dlg.values()
+        assert valori == {"page": "Letter", "orientation": "orizzontale",
+                          "fit": "piena", "margin": units.to_pt(10.0, "mm"),
+                          "per_page": 4, "dpi": dlg.dpi.value()}
+        for chiave, valore in valori.items():
+            if chiave in ("page", "fit", "orientation"):
+                assert isinstance(valore, str) and valore
+        assert valori["fit"] in ADATTAMENTI
+    finally:
+        dlg.close()
+
+
+def test_le_opzioni_inutili_sono_spente(finestra, tmp_path):
+    """Un'opzione che non cambierebbe il risultato non deve restare attiva."""
+    scelte = _tre_foto(tmp_path)
+    dlg = _dialogo_conversione(finestra, scelte)
+    try:
+        # girare la pagina con il formato «immagine» cambierebbe la forma attesa
+        dlg.formato.setCurrentIndex(dlg.formato.findData("immagine"))
+        assert not dlg.orientamento.isEnabled(), "l'orientamento gira una pagina gia' giusta"
+        # la risoluzione serve solo con la dimensione reale
+        dlg.formato.setCurrentIndex(dlg.formato.findData("A4"))
+        assert not dlg.dpi.isEnabled(), "una risoluzione che non ridimensiona non serve"
+        dlg.adattamento.setCurrentIndex(dlg.adattamento.findData("originale"))
+        assert dlg.dpi.isEnabled()
+    finally:
+        dlg.close()
+
+
+def test_il_dialogo_converte_e_apre(finestra, tmp_path):
+    """Dal menu in fondo al PDF: il percorso intero, con il dialogo vero.
+
+    Il dialogo e' modale, quindi blocca il chiamante: a riempirelo e' un timer
+    che gira mentre la finestra e' ferma dentro ``exec()``, come farebbe un
+    utente. Qui non si sostituisce nessun pezzo del percorso.
+    """
+    from PySide6.QtWidgets import QFileDialog
+
+    from pdfeditor.ui.dialogs import props
+
+    scelte = _tre_foto(tmp_path)
+    bersaglio = tmp_path / "dal-menu.pdf"
+    originale = QFileDialog.getSaveFileName
+    QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (str(bersaglio), "PDF"))
+    aperto = []
+
+    def riempi() -> None:
+        for w in QApplication.instance().topLevelWidgets():
+            if isinstance(w, props.ImagesToPdfDialog) and w.isVisible():
+                for f in scelte:
+                    w._aggiungi(pathlib.Path(f))
+                w.per_pagina.setValue(2)
+                aperto.append(w.values())
+                w.accept()
+                return
+
+    timer = QTimer()
+    timer.setInterval(30)
+    timer.timeout.connect(riempi)
+    timer.start()
+    try:
+        finestra.file_images_to_pdf()
+        for _ in range(8):
+            QApplication.instance().processEvents()
+    finally:
+        timer.stop()
+        QFileDialog.getSaveFileName = originale
+    assert aperto, "il dialogo di conversione non si e' aperto"
+    assert aperto[0]["per_page"] == 2, "le scelte del dialogo non sono arrivate al motore"
+    assert bersaglio.exists(), "il PDF non e' stato scritto"
+    assert finestra.doc.path == bersaglio, "il PDF generato non e' stato aperto"
+    assert finestra.doc.page_count == 2, "tre foto a due per pagina sono due pagine"

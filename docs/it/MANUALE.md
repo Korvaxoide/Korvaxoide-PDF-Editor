@@ -427,10 +427,53 @@ Si sceglie cosa ottenere:
 - **Testo**: il testo di tutto il documento o di una pagina;
 - **HTML**: per mettere il documento sul web.
 
-### File ▸ Importa da immagini…
+### File ▸ Converti immagini in PDF…
 
-Trasforma un insieme di immagini (JPEG, PNG, TIFF, BMP, WebP) in un PDF,
-nell'ordine in cui vengono selezionate.
+Trasforma un insieme di immagini (JPEG, PNG, TIFF, BMP, WebP) in un PDF. Il
+dialogo si apre sulle immagini scelte e il risultato dipende da come si
+decide di metterle in pagina.
+
+**Scegliere e ordinare**
+
+- **Aggiungi…** aggiunge altre immagini; lo stesso file due volte entra una;
+- **Rimuovi** toglie quelle selezionate, **Svuota** le toglie tutte;
+- **Sposta su** e **Sposta giù** spostano di un posto quelle selezionate, che
+  si possono anche trascinare col puntatore;
+- **Ordina per nome** e **Ordina per data** le mettono in ordine tutte, la
+  seconda con la più recente per prima.
+
+Ognuna mostra la miniatura, il nome del file e la dimensione in pixel: così per
+distinguere due fotografie non serve aprirle.
+
+**La pagina**
+
+| Opzione | Cosa fa |
+| --- | --- |
+| Formato | il formato carta, fino a **Come la prima immagine** |
+| Orientamento | verticale oppure orizzontale |
+| Adattamento | come la foto è messa nel suo spazio |
+| Margini | il bordo bianco attorno a ogni foto, in millimetri |
+| Immagini per pagina | quante foto stanno in una pagina |
+| Risoluzione | solo con la dimensione reale |
+
+*Adatta alla pagina* mostra tutta la foto, con strisce bianche dove le forme
+non combaciano. *Riempi la pagina* riempie il foglio fino ai bordi e taglia la
+parte eccedente, come una foto stampata. *Dimensione reale* non ridimensiona
+nulla: un pixel vale un punto alla risoluzione scelta, quindi 150 dpi rendono
+una foto 800×600 di 384×288 punti.
+
+Con **Come la prima immagine** la pagina prende la forma della prima foto che
+ci finisce sopra, e i margini si aggiungono attorno. Più di una foto per pagina
+le dispone in griglia, quattro per pagina per default.
+
+La riga sotto le opzioni dice quante pagine verranno fuori. Premendo **Converti**
+il programma chiede dove scrivere il file, lo scrive e lo apre; se il documento
+aperto aveva modifiche non salvate, prima chiede cosa farne. Le fotografie non
+vanno ricompresse: un JPEG entra nel PDF come lo stesso JPEG, quindi il file
+pesa circa quanto le fotografie.
+
+Aprire una singola immagine con *File ▸ Apri…* continua a fare la cosa ovvia:
+una pagina, della forma della foto, che la riempie.
 
 ### File ▸ Unisci documenti…
 

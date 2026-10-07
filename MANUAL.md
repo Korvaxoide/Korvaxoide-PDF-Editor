@@ -432,10 +432,52 @@ Choose what you want:
 - **Testo** (Text): the text of the whole document or of one page;
 - **HTML**: to put the document on the web.
 
-### File ▸ Importa da immagini… (Import from images)
+### File ▸ Converti immagini in PDF… (Convert images to PDF)
 
-Turns a set of images (JPEG, PNG, TIFF, BMP, WebP) into a PDF, in the order
-they are selected.
+Turns a set of images (JPEG, PNG, TIFF, BMP, WebP) into a PDF. The dialog opens
+on the images you choose, and it is up to you how they end up on the page.
+
+**Choosing and ordering**
+
+- **Aggiungi…** (Add) appends more images; the same file twice is added once;
+- **Rimuovi** (Remove) drops the selected ones, **Svuota** (Clear) all of them;
+- **Sposta su** and **Sposta giù** move the selected ones by one place, and they
+  can also be dragged into position with the pointer;
+- **Ordina per nome** and **Ordina per data** sort them all, the second one
+  putting the most recent first.
+
+Each one shows its thumbnail, its file name and its size in pixels, so telling
+two photographs apart does not mean opening them.
+
+**The page**
+
+| Option | What it does |
+| --- | --- |
+| Formato (Format) | the paper size, up to **Come la prima immagine** |
+| Orientamento (Orientation) | vertical or horizontal |
+| Adattamento (Fit) | how the photo is placed in its space |
+| Margini (Margins) | the white border around each photo, in millimetres |
+| Immagini per pagina (Images per page) | how many photos go on one page |
+| Risoluzione (Resolution) | only with the actual size |
+
+*Adatta alla pagina* shows the whole photo, with white bars where the shapes do
+not match. *Riempi la pagina* fills the page edge to edge and cuts off the
+excess, the way a printed photo does. *Dimensione reale* does not resize the
+photo at all: one pixel is one point at the resolution you pick, so 150 dpi
+makes an 800×600 photo 384×288 points.
+
+With **Come la prima immagine** the page takes the shape of the first photo on
+it, and the margins are added around it. Putting more than one photo on a page
+lays them out in a grid, four per page by default.
+
+The line under the options says how many pages you are about to get. When you
+press **Converti** (Convert) the program asks where to write the file, writes
+it, and opens it: if the document you had open had unsaved changes, it asks
+about them first. The photos are not recompressed — a JPEG goes into the PDF
+as the same JPEG, so the file is about the size of the photographs.
+
+Opening a single image with *File ▸ Apri…* still does the obvious thing: one
+page, shaped like the photo, filling it.
 
 ### File ▸ Unisci documenti… (Merge documents)
 

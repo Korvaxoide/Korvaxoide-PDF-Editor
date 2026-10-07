@@ -896,3 +896,28 @@ def test_annulla_e_ripeti_sono_mirrati():
     assert destra == tuple(r[::-1] for r in sinistra), (
         "annulla e ripeti non sono uno la specular dell'altro"
     )
+
+
+def test_la_conversione_dalle_immagini_ha_una_sua_voce_di_menu(finestra):
+    """La voce deve chiamarsi come quello che fa, e non come quello che non fa.
+
+    Era «Importa da immagini…» e sostituiva il documento aperto senza passare da
+    un file: un'etichetta che prometteva un'importazione e intesa una
+    sostituzione. Ora la voce dice la conversione e il risultato e' un file.
+    """
+    voci = {}
+    for azione in finestra.menuBar().actions():
+        menu = azione.menu()
+        if menu is not None:
+            for voce in menu.actions():
+                voci[voce.text()] = voce
+    assert "Converti immagini in PDF…" in voci, (
+        f"la voce di menu della conversione non c'e': {sorted(voci)[:12]}"
+    )
+    assert "Importa da immagini…" not in voci, "la voce vecchia e' rimasta accanto alla nuova"
+    assert hasattr(finestra, "file_images_to_pdf")
+    assert not hasattr(finestra, "file_import_images"), (
+        "la vecchia azione che sostituiva il documento aperto e' ancora agganciata"
+    )
+    # la conversione e' un'azione lenta e va annunciata, non lanciata e lasciata
+    assert finestra._azioni_menu, "le azioni dei menu non sono tenute vive"

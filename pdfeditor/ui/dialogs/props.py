@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import datetime as _dt
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import pymupdf
 from PySide6.QtCore import QDate, QSize, Qt
-from PySide6.QtGui import QColor, QIcon
+from PySide6.QtGui import QColor, QIcon, QPixmap
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox,
     QColorDialog,
     QComboBox,
@@ -1226,6 +1227,339 @@ class MergeDialog(QDialog):
 
     def files(self) -> list[str]:
         return [self.list.item(i).text() for i in range(self.list.count())]
+
+
+# ------------------------------------------------------- conversione da immagini
+
+#: lato lungo dell'anteprima, in punti: la miniatura deve stare nella casella
+#: della griglia, non essere l'immagine intera rimpicciolita
+LATO_MINIATURA = 110
+
+
+def _conta(n: int, italiano: tuple[str, str], inglese: tuple[str, str]) -> str:
+    """«1 immagine», «3 immagini»: il numero con il nome contato.
+
+    Le due coppie servono perche' il nome singolare e plurale cambia da una
+    lingua all'altra, mentre il numero no.
+    """
+    singolare, plurale = inglese if i18n.lingua() == "en" else italiano
+    return f"{n} {singolare if n == 1 else plurale}"
+
+
+def _anteprima(percorso: Path) -> tuple[QPixmap, tuple[int, int] | None]:
+    """Miniatura e dimensione in pixel di un'immagine, leggendola una volta sola.
+
+    L'immagine si dimezza finche' non sta nella casella della griglia:
+    decodificare dodici megapixel per disegnare centoventi punti costerebbe
+    piu' di tutto il resto della conversione. Un'anteprima che non si genera non
+    e' un errore: sotto il nome del file non ci sara' la dimensione, e il file
+    si inserisce lo stesso. Se non si puo' leggere, a dirlo non basta il
+    dialogo delle scelte: lo dice la conversione.
+    """
+    try:
+        pix = pymupdf.Pixmap(str(percorso))
+    except Exception:
+        return QPixmap(), None
+    misura = (pix.width, pix.height)
+    try:
+        while max(pix.width, pix.height) > LATO_MINIATURA * 2:
+            pix.shrink(1)
+        pm = QPixmap()
+        if pm.loadFromData(pix.tobytes("png")):
+            return pm, misura
+    except Exception:
+        pass
+    return QPixmap(), misura
+
+
+class ImagesToPdfDialog(QDialog):
+    """Conversione di un gruppo di immagini in un unico PDF.
+
+    Le immagini si scelgono, si mettono in ordine e si dispongono sulla pagina
+    secondo le opzioni: il risultato e' un file nuovo, e il documento aperto non
+    ci passa per un pelo.
+    """
+
+    @staticmethod
+    def adattamenti() -> tuple[tuple[str, str], ...]:
+        """Gli adattamenti dell'immagine alla cella, con la spiegazione.
+
+        Nella finestra l'etichetta e' breve e la spiegazione va nella
+        suggerimento: un menu a tendina con dentro «Adatta alla pagina (si vede
+        tutta l'immagine)» e' largo il doppio del foglio, e il dialogo che
+        contiene tutte le opzioni smette di stare nello schermo.
+        """
+        return (
+            ("pagina", tr("Adatta alla pagina"), tr("L'immagine si vede intera, con spazi bianchi")),
+            ("piena", tr("Riempi la pagina"), tr("La pagina si riempie e l'immagine viene tagliata")),
+            ("originale", tr("Dimensione reale"), tr("L'immagine non viene ridimensionata")),
+        )
+
+    @staticmethod
+    def orientamenti() -> tuple[tuple[str, str], ...]:
+        return (("verticale", tr("Verticale")), ("orizzontale", tr("Orizzontale")))
+
+    @staticmethod
+    def formati() -> tuple[tuple[str, str], ...]:
+        """I formati pagina, con i piu' richiesti in cima e la foto in fondo."""
+        # l'ordine del dizionario parte da A0, che nessuno stampa: in cima a un
+        # elenco che si apre per scegliere la carta vanno A4 e Letter
+        primi = ("A4", "Letter", "A3", "A5", "Legal")
+        scelti = [n for n in primi if n in units.PAGE_SIZES]
+        scelti += [n for n in units.PAGE_SIZES if n not in scelti]
+        return tuple((n, n) for n in scelti) + (("immagine", tr("Come la prima immagine")),)
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        start_dir: str = "",
+        files: Sequence[str] = (),
+    ) -> None:
+        super().__init__(parent)
+        self.palette = theme.corrente()
+        self.start_dir = start_dir
+        self.setWindowTitle(tr("Converti immagini in PDF"))
+        dlgutil.adatta_a_schermo(self, 840, 660)
+        v = QVBoxLayout(self)
+        self.list = QListWidget()
+        self.list.setViewMode(QListWidget.IconMode)
+        self.list.setResizeMode(QListWidget.Adjust)
+        self.list.setWordWrap(True)
+        self.list.setIconSize(QSize(LATO_MINIATURA, LATO_MINIATURA))
+        self.list.setGridSize(QSize(LATO_MINIATURA + 40, LATO_MINIATURA + 56))
+        self.list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        # le miniature si riordinano anche a mano: e' l'unico modo per mettere
+        # delle foto in ordine senza leggerne i nomi uno per uno
+        self.list.setDragDropMode(QAbstractItemView.InternalMove)
+        v.addWidget(self.list, 1)
+        v.addLayout(self._barra_pulsanti())
+        # l'etichetta esiste prima delle opzioni: costruendole si accendono e
+        # si spengono a vicenda, e una di loro chiede subito il riepilogo
+        self.riepilogo = QLabel("")
+        v.addWidget(self._barra_opzioni())
+        v.addWidget(self.riepilogo)
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb.button(QDialogButtonBox.Ok).setText(tr("Converti"))
+        bb.button(QDialogButtonBox.Ok).setProperty("accent", True)
+        bb.accepted.connect(self.accept)
+        bb.rejected.connect(self.reject)
+        v.addWidget(bb)
+        for f in files:
+            self._aggiungi(Path(f))
+        self._aggiorna_riepilogo()
+
+    def _barra_pulsanti(self) -> QHBoxLayout:
+        row = QHBoxLayout()
+        b_add = QPushButton(tr("Aggiungi…"))
+        b_add.clicked.connect(self._scegli)
+        b_rm = QPushButton(tr("Rimuovi"))
+        b_rm.clicked.connect(self._rimuovi)
+        b_clear = QPushButton(tr("Svuota"))
+        b_clear.clicked.connect(self._svuota)
+        b_up = QPushButton(tr("Sposta su"))
+        b_up.clicked.connect(lambda: self._sposta(-1))
+        b_down = QPushButton(tr("Sposta giù"))
+        b_down.clicked.connect(lambda: self._sposta(1))
+        b_nome = QPushButton(tr("Ordina per nome"))
+        b_nome.clicked.connect(lambda: self._ordina("nome"))
+        b_data = QPushButton(tr("Ordina per data"))
+        b_data.clicked.connect(lambda: self._ordina("data"))
+        for b in (b_add, b_rm, b_clear, b_up, b_down, b_nome, b_data):
+            row.addWidget(b)
+        row.addStretch(1)
+        return row
+
+    def _barra_opzioni(self) -> QGroupBox:
+        """Le opzioni di pagina, in un gruppo con due colonne.
+
+        Non in una fila sola: sei coppie di etichetta e controllo in fila
+        occuperebbero una larghezza che il dialogo non riesce a tenere nello
+        schermo, e a quel punto si autoannida in un'area scorrevole e tutto
+        si schiaccia. In due colonne la larghezza resta quella di una coppia.
+        """
+        gruppo = QGroupBox(tr("Disposizione sulla pagina"))
+        griglia = QGridLayout(gruppo)
+        self.formato = QComboBox()
+        for codice, etichetta in self.formati():
+            self.formato.addItem(etichetta, codice)
+        self.formato.setCurrentIndex(max(0, self.formato.findData("A4")))
+        self.orientamento = QComboBox()
+        for codice, etichetta in self.orientamenti():
+            self.orientamento.addItem(etichetta, codice)
+        self.adattamento = QComboBox()
+        for codice, etichetta, spiegazione in self.adattamenti():
+            self.adattamento.addItem(etichetta, codice)
+            indice = self.adattamento.count() - 1
+            self.adattamento.setItemData(indice, spiegazione, Qt.ToolTipRole)
+        self.adattamento.setToolTip(
+            tr("Come l'immagine viene messa nel posto che le e' stato assegnato")
+        )
+        self.margini = QDoubleSpinBox()
+        self.margini.setRange(0.0, 60.0)
+        self.margini.setDecimals(1)
+        self.margini.setSingleStep(1.0)
+        self.margini.setValue(1.0)
+        self.margini.setSuffix(" mm")
+        self.margini.setToolTip(tr("Spazio bianco attorno a ogni immagine"))
+        self.per_pagina = QSpinBox()
+        self.per_pagina.setRange(1, docmod.MAX_IMMAGINI_PER_PAGINA)
+        self.per_pagina.setValue(1)
+        self.per_pagina.setToolTip(tr("Quante immagini su ogni pagina, disposte in griglia"))
+        self.dpi = QSpinBox()
+        self.dpi.setRange(36, 1200)
+        self.dpi.setValue(150)
+        self.dpi.setSingleStep(10)
+        self.dpi.setSuffix(" dpi")
+        self.dpi.setToolTip(tr("Risoluzione con cui viene stampata l'immagine"))
+        self.dpi.setEnabled(False)
+        sinistra = ((tr("Formato"), self.formato),
+                    (tr("Orientamento"), self.orientamento),
+                    (tr("Immagini per pagina"), self.per_pagina))
+        destra = ((tr("Adattamento"), self.adattamento),
+                  (tr("Margini"), self.margini),
+                  (tr("Risoluzione"), self.dpi))
+        for colonna, coppie in enumerate((sinistra, destra)):
+            for riga, (etichetta, controllo) in enumerate(coppie):
+                griglia.addWidget(QLabel(etichetta), riga, colonna * 2)
+                griglia.addWidget(controllo, riga, colonna * 2 + 1)
+        griglia.setColumnStretch(1, 1)
+        griglia.setColumnStretch(3, 1)
+        self.formato.currentIndexChanged.connect(self._opzioni_disponibili)
+        self.adattamento.currentIndexChanged.connect(self._opzioni_disponibili)
+        self.per_pagina.valueChanged.connect(lambda _v: self._opzioni_disponibili())
+        self._opzioni_disponibili()
+        return gruppo
+
+    def _opzioni_disponibili(self, *_a: Any) -> None:
+        """Spegne le opzioni che non cambierebbero il risultato.
+
+        Girare la pagina non ha senso con il formato «immagine»: la decide la
+        foto, e ruotarla cambierebbe la forma attesa dall'immagine. La
+        risoluzione serve solo con la dimensione reale, e altrove starebbe li'
+        come un numero che non influenza niente.
+        """
+        formato = self.formato.currentData()
+        adattamento = self.adattamento.currentData()
+        self.orientamento.setEnabled(formato != "immagine")
+        self.dpi.setEnabled(adattamento == "originale")
+        self._aggiorna_riepilogo()
+
+    # ------------------------------------------------------------- le immagini
+
+    def _aggiungi(self, percorso: Path) -> None:
+        """Mette in lista un'immagine, saltando un percorso gia' presente."""
+        testo = str(percorso)
+        if testo in self.images():
+            return
+        miniatura, misura = _anteprima(percorso)
+        nome = percorso.name
+        if misura is not None:
+            nome = f"{nome}\n{misura[0]}×{misura[1]} px"
+        item = QListWidgetItem(nome)
+        item.setData(Qt.UserRole, testo)
+        item.setToolTip(percorso.name)
+        if not miniatura.isNull():
+            item.setIcon(QIcon(miniatura))
+        self.list.addItem(item)
+
+    def _scegli(self) -> None:
+        from ..main_window import image_filter
+
+        scelte, _ = QFileDialog.getOpenFileNames(self, tr("Scegli le immagini"),
+                                                 self.start_dir, image_filter())
+        for f in scelte:
+            self._aggiungi(Path(f))
+        self._aggiorna_riepilogo()
+
+    def _rimuovi(self) -> None:
+        for item in self.list.selectedItems():
+            self.list.takeItem(self.list.row(item))
+        self._aggiorna_riepilogo()
+
+    def _svuota(self) -> None:
+        self.list.clear()
+        self._aggiorna_riepilogo()
+
+    def _sposta(self, delta: int) -> None:
+        """Sposta di un posto le voci selezionate, tenendone l'ordine relativo.
+
+        Le voci selezionate si muovono insieme, come un blocco dalla prima
+        all'ultima: muoverle una per una le farebbe scavalcare a vicenda, perche'
+        ognuna occuperebbe il posto appena liberato da quella davanti. Fuori dai
+        bordi non si muove niente, invece di spostare quello che non puo' scendere
+        e lasciare indietro quello che non puo' salire.
+        """
+        voci = self.list.selectedItems()
+        if not voci:
+            return
+        righe = sorted(self.list.row(it) for it in voci)
+        primo, ultimo = righe[0], righe[-1]
+        nuovo = primo + delta
+        if nuovo < 0:
+            nuovo = 0
+        if nuovo + (ultimo - primo) >= self.list.count():
+            nuovo = self.list.count() - 1 - (ultimo - primo)
+        if nuovo == primo:
+            return
+        # dall'ultima in alto: togliere prima quella sopra lascia valide le
+        # righe sotto, che senza questo si sarebbero spostate di una
+        scelte = [self.list.takeItem(r) for r in reversed(righe)]
+        scelte.reverse()
+        for offset, it in enumerate(scelte):
+            self.list.insertItem(nuovo + offset, it)
+        # la selezione segue le voci spostate: lasciarla sul numero di riga
+        # selezionerebbe un'altra immagine, quella finita li' dopo il passaggio
+        self.list.clearSelection()
+        for r in range(nuovo, nuovo + len(scelte)):
+            self.list.item(r).setSelected(True)
+        self._aggiorna_riepilogo()
+
+    def _ordina(self, criterio: str) -> None:
+        voci = [self.list.takeItem(0) for _ in range(self.list.count())]
+        if criterio == "data":
+            voci.sort(key=lambda it: -_modifica(it))
+        else:
+            # per nome e' il nome del file, non il percorso: altrimenti le
+            # cartelle, che vengono prima in ordine alfabetico, deciderebbero
+            # l'ordine di tutto quello che c'e' dentro
+            voci.sort(key=lambda it: (Path(it.data(Qt.UserRole)).name.lower(),
+                                      (it.data(Qt.UserRole) or "").lower()))
+        for it in voci:
+            self.list.addItem(it)
+        self._aggiorna_riepilogo()
+
+    def _aggiorna_riepilogo(self) -> None:
+        quante = self.list.count()
+        per = int(self.per_pagina.value())
+        pagine = -(-quante // per)
+        self.riepilogo.setText(
+            tr("{immagini} in {pagine}.").format(
+                immagini=_conta(quante, ("immagine", "immagini"), ("image", "images")),
+                pagine=_conta(pagine, ("pagina", "pagine"), ("page", "pages")),
+            )
+        )
+
+    def images(self) -> list[str]:
+        """I percorsi nell'ordine in cui verranno inseriti."""
+        return [self.list.item(i).data(Qt.UserRole) for i in range(self.list.count())]
+
+    def values(self) -> dict[str, Any]:
+        return {
+            "page": self.formato.currentData(),
+            "orientation": self.orientamento.currentData(),
+            "fit": self.adattamento.currentData(),
+            "margin": units.to_pt(float(self.margini.value()), "mm"),
+            "per_page": int(self.per_pagina.value()),
+            "dpi": int(self.dpi.value()),
+        }
+
+
+def _modifica(voce: QListWidgetItem) -> float:
+    """Quando e' stato scritto il file della voce, o zero se non si sa."""
+    try:
+        return Path(voce.data(Qt.UserRole)).stat().st_mtime
+    except Exception:
+        return 0.0
 
 
 # --------------------------------------------------------------- esportazione
