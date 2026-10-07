@@ -11,7 +11,7 @@ Nessun documento lascia il computer: il programma non usa la rete.
 ![Python](https://img.shields.io/badge/python-3.12%2B-3776ab)
 ![Qt](https://img.shields.io/badge/Qt-6-41cd52)
 ![Licenza](https://img.shields.io/badge/licenza-AGPL--3.0-8b5cf6)
-![Test](https://img.shields.io/badge/test-769%20superati-4c1.svg)
+![Test](https://img.shields.io/badge/test-815%20superati-4c1.svg)
 
 ---
 
@@ -335,7 +335,13 @@ protetto senza le password, il salvataggio viene rifiutato e lo si dice.
 | Riduci dimensione | *File ▸ Riduci dimensione del file…* |
 | PDF/A | *File ▸ Esporta…* → PDF/A |
 | Unisci documenti | *File ▸ Unisci documenti…* |
-| Importa da immagini | *File ▸ Importa da immagini…* |
+| Trasforma le foto in un PDF | *File ▸ Converti immagini in PDF…* |
+
+*File ▸ Converti immagini in PDF…* trasforma un mucchio di fotografie in un
+documento: si scelgono le immagini, si mettono nell'ordine che si vuole, si
+sceglie il formato della pagina, i margini e quante immagini ci stanno in ogni
+pagina; il programma scrive un PDF nuovo e lo apre. Aprire una singola
+immagine continua a fare la cosa ovvia: una pagina, della forma della foto.
 
 *File ▸ Riduci dimensione del file…* ricomprime le immagini più grandi di una
 certa soglia e riporta prima e dopo, così si vede se conviene.
@@ -500,7 +506,7 @@ Le regole seguite:
 ## Verifiche
 
 ```bash
-./venv/bin/python -m pytest tests/ -q     # 769 test
+./venv/bin/python -m pytest tests/ -q     # 815 test
 ./venv/bin/python tests/integration.py    # 80 verifiche di integrazione
 ./venv/bin/python tests/finale.py         # 46 verifiche di collaudo
 ./venv/bin/python tests/visual.py         # catture dell'interfaccia

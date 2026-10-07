@@ -8,7 +8,7 @@ No document ever leaves your computer: the program does not use the network.
 ![Python](https://img.shields.io/badge/python-3.12%2B-3776ab)
 ![Qt](https://img.shields.io/badge/Qt-6-41cd52)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-8b5cf6)
-![Tests](https://img.shields.io/badge/tests-769%20passed-4c1.svg)
+![Tests](https://img.shields.io/badge/tests-815%20passed-4c1.svg)
 
 ---
 
@@ -340,7 +340,13 @@ without the passwords is refused, and you are told so.
 | Reduce file size | *File ▸ Riduci dimensione del file…* |
 | PDF/A | *File ▸ Esporta…* → PDF/A |
 | Merge documents | *File ▸ Unisci documenti…* (Merge documents) |
-| Import from images | *File ▸ Importa da immagini…* |
+| Turn photos into a PDF | *File ▸ Converti immagini in PDF…* |
+
+*File ▸ Converti immagini in PDF…* (Convert images to PDF) turns a pile of
+photos into a document: pick the images, put them in the order you want, choose
+the page size, the margins and how many of them go on each page, and it writes
+a new PDF and opens it. Opening a single image still does the obvious thing —
+one page, shaped like the photo.
 
 *File ▸ Riduci dimensione del file…* recompresses the images above a size
 threshold and reports before and after, so you can see whether it is worth it.
@@ -512,7 +518,7 @@ The rules followed:
 ## Tests
 
 ```bash
-./venv/bin/python -m pytest tests/ -q     # 769 tests
+./venv/bin/python -m pytest tests/ -q     # 815 tests
 ./venv/bin/python tests/integration.py    # 80 integration checks
 ./venv/bin/python tests/finale.py         # 46 end-to-end checks
 ./venv/bin/python tests/visual.py         # interface captures

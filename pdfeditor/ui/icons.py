@@ -130,6 +130,26 @@ def _image(s: float, c: str) -> None:
     return d
 
 
+def _images(s: float, c: str) -> None:
+    """Piu' immagini: cornici sfalsate e una in primo piano."""
+
+    def d(p: QPainter) -> None:
+        _pen(p, c, s * 0.07)
+        p.setBrush(Qt.NoBrush)
+        p.drawRoundedRect(QRectF(s * 0.08, s * 0.12, s * 0.52, s * 0.42), s * 0.06, s * 0.06)
+        p.drawRoundedRect(QRectF(s * 0.21, s * 0.25, s * 0.52, s * 0.42), s * 0.06, s * 0.06)
+        p.drawRoundedRect(QRectF(s * 0.34, s * 0.38, s * 0.58, s * 0.47), s * 0.06, s * 0.06)
+        _fill(p, c)
+        p.drawEllipse(QPointF(s * 0.49, s * 0.52), s * 0.05, s * 0.05)
+        p.setPen(Qt.NoPen)
+        p.drawPath(_path(
+            [(s * 0.38, s * 0.81), (s * 0.52, s * 0.61), (s * 0.62, s * 0.73),
+             (s * 0.7, s * 0.65), (s * 0.88, s * 0.81)]
+        ))
+
+    return d
+
+
 def _sign(s: float, c: str) -> None:
     def d(p: QPainter) -> None:
         _pen(p, c, s * 0.085)
@@ -847,6 +867,7 @@ DRAWERS: dict[str, Callable[[float, str], Callable[[QPainter], None]]] = {
     "save": _save,
     "text": _text,
     "image": _image,
+    "images": _images,
     "sign": _sign,
     "pen": _pen_tool,
     "keyboard": _keyboard,

@@ -354,6 +354,322 @@ def test_immagini(app_pulita, tmp_path):
     assert estratti.exists()
 
 
+# ====================================================== conversione da immagini
+
+def _foto(cartella, nome, w=800, h=600, colore=(200, 40, 40)):
+    """Scrive un'immagine di prova e ne restituisce il percorso."""
+    from PIL import Image
+
+    Image.new("RGB", (w, h), colore).save(cartella / nome, "PNG")
+    return str(cartella / nome)
+
+
+def _foto_ordinate(cartella, colori):
+    """Un'immagine per colore, nell'ordine dei colori richiesti."""
+    return [_foto(cartella, f"foto{idx}.png", colore=c) for idx, c in enumerate(colori)]
+
+
+def _apri(percorso):
+    return pymupdf.open(percorso)
+
+
+def _forme(generato):
+    """Le dimensioni di ogni pagina, nell'ordine in cui sono disposte."""
+    return [(round(p.rect.width), round(p.rect.height)) for p in generato]
+
+
+def _riquadri(pagina):
+    """I riquadri delle immagini disegnate, nell'ordine in cui sono tracciate."""
+    return [pymupdf.Rect(i["bbox"]) for i in pagina.get_image_info()]
+
+
+def _al_centro(pagina):
+    """Il colore del pixel al centro della pagina: dice quale foto c'e' dentro."""
+    pm = pagina.get_pixmap(dpi=24)
+    return pm.pixel(pm.width // 2, pm.height // 2)
+
+
+def _quasiuguale(a, b, tol=6):
+    return all(abs(x - y) <= tol for x, y in zip(a, b))
+
+
+def test_converti_una_immagine(app_pulita, tmp_path):
+    doc = app_pulita.doc
+    prima, dopo = doc.path, doc.page_count
+    out = tmp_path / "foto.pdf"
+    assert doc.images_to_pdf(out, [_foto(tmp_path, "a.png")]) == out
+    assert out.exists()
+    generato = _apri(out)
+    assert generato.page_count == 1
+    assert round(generato[0].rect.width) == 595 and round(generato[0].rect.height) == 842
+    # la conversione produce un file a se': il documento aperto resta com'era
+    assert doc.path == prima and doc.page_count == dopo
+
+
+def test_converti_una_foto_per_pagina(app_pulita, tmp_path):
+    out = tmp_path / "foto.pdf"
+    app_pulita.doc.images_to_pdf(out, _foto_ordinate(tmp_path, [(200, 0, 0), (0, 200, 0), (0, 0, 200)]))
+    generato = _apri(out)
+    assert generato.page_count == 3
+    for pagina, atteso in zip(generato, [(200, 0, 0), (0, 200, 0), (0, 0, 200)]):
+        assert _quasiuguale(_al_centro(pagina), atteso), "le foto non sono nell'ordine scelto"
+
+
+def test_la_griglia_raggruppa_le_immagini(app_pulita, tmp_path):
+    out = tmp_path / "griglia.pdf"
+    app_pulita.doc.images_to_pdf(out, _foto_ordinate(tmp_path, [(200, 0, 0), (0, 200, 0), (0, 0, 200)]),
+                                 per_page=4)
+    generato = _apri(out)
+    assert generato.page_count == 1
+    riquadri = _riquadri(generato[0])
+    assert len(riquadri) == 3
+    # la prima sta in alto a sinistra, la seconda in alto a destra: e' l'ordine
+    # con cui sono state scelte, letto sulla pagina
+    assert riquadri[0].x0 < riquadri[1].x0
+    assert _quasiuguale(_al_centro(generato[0]), (0, 200, 0)) is False
+
+
+def test_la_griglia_mette_una_immagine_per_cella(app_pulita, tmp_path):
+    out = tmp_path / "griglia.pdf"
+    quattro = [_foto(tmp_path, f"q{i}.png", 400, 400) for i in range(4)]
+    app_pulita.doc.images_to_pdf(out, quattro, per_page=4, margin=0.0)
+    riquadri = _riquadri(_apri(out)[0])
+    assert len(riquadri) == 4
+    # quattro celle quadre su un A4: si toccano e non si sovrappongono
+    for r in riquadri:
+        assert round(r.width) == round(r.height)
+        assert not (r & pymupdf.Rect(0, 0, 595, 842)).is_empty
+    for i, a in enumerate(riquadri):
+        for b in riquadri[i + 1:]:
+            assert (a & b).is_empty, "due immagini nella stessa cella"
+
+
+def test_i_margini_tengono_le_immagini_dentro(app_pulita, tmp_path):
+    out = tmp_path / "margini.pdf"
+    margine = 36.0
+    app_pulita.doc.images_to_pdf(out, [_foto(tmp_path, "a.png")], margin=margine)
+    riquadro = _riquadri(_apri(out)[0])[0]
+    assert riquadro.x0 >= margine - 0.5 and riquadro.y0 >= margine - 0.5
+    assert _apri(out)[0].rect.width - riquadro.x1 >= margine - 0.5
+
+
+def test_il_formato_orizzontale_scambia_i_lati(app_pulita, tmp_path):
+    out = tmp_path / "orizzontale.pdf"
+    app_pulita.doc.images_to_pdf(out, [_foto(tmp_path, "a.png")], orientation="orizzontale")
+    rett = _apri(out)[0].rect
+    assert rett.width > rett.height
+    assert round(rett.width) == 842 and round(rett.height) == 595
+
+
+def test_il_formato_immagine_prende_la_forma_della_foto(app_pulita, tmp_path):
+    out = tmp_path / "forma.pdf"
+    tre = [_foto(tmp_path, "a.png", 800, 600), _foto(tmp_path, "b.png", 600, 800),
+           _foto(tmp_path, "c.png", 400, 400)]
+    app_pulita.doc.images_to_pdf(out, tre, page="immagine", fit="originale", dpi=72.0, margin=0.0)
+    generato = _apri(out)
+    assert _forme(generato) == [(800, 600), (600, 800), (400, 400)]
+
+
+def test_il_formato_immagine_tiene_i_margini(app_pulita, tmp_path):
+    out = tmp_path / "forma.pdf"
+    app_pulita.doc.images_to_pdf(out, [_foto(tmp_path, "a.png")], page="immagine",
+                                 fit="originale", dpi=72.0, margin=10.0)
+    rett = _apri(out)[0].rect
+    # il margine sta dentro la pagina: chiedere un bordo e ritrovare il foglio
+    # identico sarebbe un'opzione che sembra fare qualcosa e non fa niente
+    assert round(rett.width) == 820 and round(rett.height) == 620
+
+
+def test_l_adattamento_alla_pagina_mostra_tutto(app_pulita, tmp_path):
+    out = tmp_path / "conta.pdf"
+    # una panorama molto larga su una pagina verticale ci sta solo in altezza
+    app_pulita.doc.images_to_pdf(out, [_foto(tmp_path, "a.png", 1600, 200)], fit="pagina")
+    riquadro = _riquadri(_apri(out)[0])[0]
+    assert riquadro.width < 595
+    assert abs(riquadro.width / riquadro.height - 8.0) < 0.01
+
+
+def test_l_adattamento_piena_riempie_la_pagina(app_pulita, tmp_path):
+    out = tmp_path / "piena.pdf"
+    app_pulita.doc.images_to_pdf(out, [_foto(tmp_path, "a.png", 1600, 200)],
+                                 fit="piena", margin=0.0)
+    generato = _apri(out)
+    pm = generato[0].get_pixmap(dpi=24)
+    # il ritaglio arriva ai bordi del foglio: senza, ci sarebbero strisce vuote
+    for x, y in ((1, 1), (pm.width - 2, 1), (1, pm.height - 2), (pm.width - 2, pm.height - 2)):
+        assert _quasiuguale(pm.pixel(x, y), (200, 40, 40), tol=40), "il ritaglio non riempie la pagina"
+
+
+def test_l_adattamento_originale_stampa_alla_risoluzione(app_pulita, tmp_path):
+    for dpi, atteso in ((150.0, (384.0, 288.0)), (300.0, (192.0, 144.0))):
+        out = tmp_path / f"dpi{int(dpi)}.pdf"
+        app_pulita.doc.images_to_pdf(out, [_foto(tmp_path, "a.png")], fit="originale", dpi=dpi)
+        riquadro = _riquadri(_apri(out)[0])[0]
+        assert abs(riquadro.width - atteso[0]) < 1.0
+        assert abs(riquadro.height - atteso[1]) < 1.0
+
+
+def test_la_griglia_ha_un_tetto(app_pulita, tmp_path):
+    out = tmp_path / "troppe.pdf"
+    dodici = [_foto(tmp_path, f"t{i}.png", 60, 60) for i in range(13)]
+    app_pulita.doc.images_to_pdf(out, dodici, per_page=99, margin=0.0)
+    generato = _apri(out)
+    from pdfeditor.core.document import MAX_IMMAGINI_PER_PAGINA
+
+    # oltre il tetto il foglio diventa una tabelle di francobolli illeggibili:
+    # il chiamante puo' sbagliare il numero, non renderlo illeggibile
+    assert generato.page_count == 2
+    assert MAX_IMMAGINI_PER_PAGINA == 12
+
+
+def test_converti_senza_immagini(app_pulita, tmp_path):
+    from pdfeditor.core.document import DocumentError
+
+    with pytest.raises(DocumentError):
+        app_pulita.doc.images_to_pdf(tmp_path / "vuoto.pdf", [])
+
+
+def test_converti_una_immagine_illeggibile(app_pulita, tmp_path):
+    from pdfeditor.core.document import DocumentError
+
+    rotto = tmp_path / "rotto.png"
+    rotto.write_bytes(b"questo non e' un'immagine")
+    with pytest.raises(DocumentError) as esito:
+        app_pulita.doc.images_to_pdf(tmp_path / "rotto.pdf", [str(rotto)])
+    assert "rotto.png" in str(esito.value)
+
+
+def test_aprire_una_immagine_mette_una_foto_per_pagina(app_pulita, tmp_path):
+    """«Apri un'immagine» non e' «converti»: ogni pagina ha la forma della sua foto."""
+    doc = app_pulita.doc
+    doc.open_images([_foto(tmp_path, "a.png", 800, 600),
+                     _foto(tmp_path, "b.png", 600, 800),
+                     _foto(tmp_path, "c.png", 400, 400)])
+    assert doc.page_count == 3
+    assert _forme([doc.page(i) for i in range(3)]) == [(800, 600), (600, 800), (400, 400)]
+    # e' un documento nuovo, mai salvato: toccarlo prima non ha senso
+    assert doc.path is None
+
+
+def test_converti_immagini_crea_e_apre_il_file(app_pulita, tmp_path, monkeypatch):
+    """La voce di menu deve scrivere il PDF e aprire quello, non lasciare com'era."""
+    from PySide6.QtWidgets import QFileDialog
+
+    from pdfeditor.ui.dialogs import props
+
+    scelte = _foto_ordinate(tmp_path, [(200, 0, 0), (0, 200, 0)])
+    bersaglio = tmp_path / "conversione.pdf"
+
+    class Scelto:
+        def __init__(self, *a, **k):
+            pass
+
+        def exec(self):
+            return props.QDialog.Accepted
+
+        def images(self):
+            return scelte
+
+        def values(self):
+            return {"page": "A4", "orientation": "verticale", "fit": "pagina",
+                    "margin": 18.0, "per_page": 1, "dpi": 150}
+
+    monkeypatch.setattr(props, "ImagesToPdfDialog", Scelto)
+    monkeypatch.setattr(QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: (str(bersaglio), "PDF")))
+    app_pulita.file_images_to_pdf()
+    for _ in range(6):
+        QApplication.instance().processEvents()
+    assert bersaglio.exists(), "il PDF delle immagini non e' stato scritto"
+    assert app_pulita.doc.path == bersaglio, "il PDF generato non e' stato aperto"
+    assert app_pulita.doc.page_count == 2
+
+
+def test_converti_immagini_usa_le_scelte_del_dialogo(app_pulita, tmp_path, monkeypatch):
+    """Le opzioni scelte nel dialogo devono arrivare al motore, non essere dimenticate."""
+    from PySide6.QtWidgets import QFileDialog
+
+    from pdfeditor.ui.dialogs import props
+
+    bersaglio = tmp_path / "scelte.pdf"
+    volute = {"page": "A5", "orientation": "orizzontale", "fit": "piena",
+              "margin": 12.0, "per_page": 4, "dpi": 300}
+    passate = {}
+
+    class Scelto:
+        def __init__(self, *a, **k):
+            pass
+
+        def exec(self):
+            return props.QDialog.Accepted
+
+        def images(self):
+            return [_foto(tmp_path, "a.png")]
+
+        def values(self):
+            return dict(volute)
+
+    def finto(path, files, **kw):
+        passate.update(kw)
+        # la conversione vera gira lo stesso: cosi' l'azione arriva fino
+        # all'apertura del file senza che il file ci sia
+        return reale(path, files, **kw)
+
+    reale = app_pulita.doc.images_to_pdf
+    monkeypatch.setattr(props, "ImagesToPdfDialog", Scelto)
+    monkeypatch.setattr(QFileDialog, "getSaveFileName",
+                        staticmethod(lambda *a, **k: (str(bersaglio), "PDF")))
+    monkeypatch.setattr(app_pulita.doc, "images_to_pdf", finto)
+    app_pulita.file_images_to_pdf()
+    assert passate == volute, f"al motore sono arrivate altre scelte: {passate}"
+
+
+def test_converti_immagini_annullato_non_tocca_niente(app_pulita, tmp_path, monkeypatch):
+    """Un dialogo annullato o senza immagini non deve produrre nessun file."""
+    from PySide6.QtWidgets import QFileDialog
+
+    from pdfeditor.ui.dialogs import props
+
+    bersaglio = tmp_path / "non_esiste.pdf"
+    richiamato = []
+
+    def sorvegliato(*a, **k):
+        richiamato.append(a)
+        return bersaglio
+
+    class Annullato:
+        def __init__(self, *a, **k):
+            pass
+
+        def exec(self):
+            return props.QDialog.Rejected
+
+        def images(self):
+            return []
+
+        def values(self):
+            return {}
+
+    monkeypatch.setattr(props, "ImagesToPdfDialog", Annullato)
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(sorvegliato))
+    monkeypatch.setattr(app_pulita.doc, "images_to_pdf",
+                        lambda *a, **k: pytest.fail("non si doveva convertire niente"))
+    app_pulita.file_images_to_pdf()
+    assert not richiamato, "il dialogo annullato ha aperto la finestra di salvataggio"
+    assert not bersaglio.exists()
+
+
+def test_converti_immagini_ridefinisce_il_formato(app_pulita, tmp_path, monkeypatch):
+    """Un formato sconosciuto o una griglia assurda non devono far fallire la conversione."""
+    out = tmp_path / "strano.pdf"
+    app_pulita.doc.images_to_pdf(out, [_foto(tmp_path, "a.png")], page="non esiste",
+                                 fit="non esiste", per_page=-4)
+    generato = _apri(out)
+    assert generato.page_count == 1
+    # senza un formato riconosciuto si cade sul A4, non su una pagina a caso
+    assert round(generato[0].rect.width) == 595
+
+
 def test_riduci_dimensione(app_pulita, tmp_path):
     esito = app_pulita.doc.reduce_size(tmp_path / "ridotto.pdf", quality=60)
     assert isinstance(esito, dict)

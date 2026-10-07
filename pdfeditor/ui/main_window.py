@@ -344,7 +344,7 @@ class MainWindow(QMainWindow):
         self._mi(m, tr("Salva una copia…"), None, self.file_save_copy)
         m.addSeparator()
         self._mi(m, tr("Esporta…"), "Ctrl+E", self.file_export)
-        self._mi(m, tr("Importa da immagini…"), None, self.file_import_images)
+        self._mi(m, tr("Converti immagini in PDF…"), None, self.file_images_to_pdf, "images")
         self._mi(m, tr("Unisci documenti…"), None, self.file_merge)
         self._mi(m, tr("Dividi documento…"), None, self.file_split)
         self._mi(m, tr("Riduci dimensione del file…"), None, self.file_reduce_size)
@@ -1034,20 +1034,37 @@ class MainWindow(QMainWindow):
         if not ok:
             QMessageBox.information(self, tr("Conversione PDF/A"), msg)
 
-    def file_import_images(self) -> None:
-        files, _ = QFileDialog.getOpenFileNames(self, "Scegli le immagini", self._start_dir(), image_filter())
+    def file_images_to_pdf(self) -> None:
+        """Converte un gruppo di immagini in un PDF nuovo, con le scelte dell'utente."""
+        from .dialogs import props
+
+        dlg = props.ImagesToPdfDialog(self, self._start_dir())
+        if dlg.exec() != props.QDialog.Accepted:
+            return
+        files = dlg.images()
         if not files:
             return
-        self._busy_start("Importazione immagini…")
+        opzioni = dlg.values()
+        path, _ = QFileDialog.getSaveFileName(self, tr("Salva il PDF delle immagini"),
+                                              str(self._start_dir()), pdf_filter())
+        if not path:
+            return
+        if not path.lower().endswith(".pdf"):
+            path += ".pdf"
+        # il PDF e' un file nuovo, ma aprirlo lascia comunque il documento
+        # precedente: le sue modifiche non salvate andrebbero perse senza chiedere
+        if not self._maybe_save():
+            return
+        self._busy_start(tr("Conversione delle immagini…"))
         try:
-            self.doc.open_images(files)
+            self.doc.images_to_pdf(path, files, **opzioni)
         except Exception as exc:
             self._busy_end()
-            self._error(exc)
+            self._error(exc, tr("Conversione non riuscita"))
             return
-        self.view.set_document(self.doc)
-        self._on_pages_changed()
-        self._busy_end(f"Importate {len(files)} immagini")
+        self._busy_end()
+        self.load_path(path)
+        self._status(tr("PDF creato: {file}").format(file=Path(path).name))
 
     def file_merge(self) -> None:
         from .dialogs import props

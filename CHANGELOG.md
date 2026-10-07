@@ -83,6 +83,26 @@ the *About* window all read it from there.
 
 ### Added
 
+- **Turning a pile of photographs into a PDF is now a dialog of its own.**
+  *File ▸ Converti immagini in PDF…* replaces *File ▸ Importa da immagini…*,
+  which took a multiple selection, made one page per image in the order the
+  file manager happened to list them, and then replaced the document that was
+  open without writing a file. The new one lets you pick the images, see them
+  as thumbnails, put them in order — by dragging them, with *Sposta su* and
+  *Sposta giù*, or sorted by name or by date — and decide how they land on the
+  page: paper size or the shape of the photo, orientation, whether the photo
+  is shown whole, fills the page and gets cut, or is printed at its real size,
+  the margins, and how many of them go on each page. A line under the options
+  says how many pages you are about to get. The PDF is written where you say
+  and then opened, and if the document that was open had unsaved changes it
+  asks before replacing it. The photographs are not recompressed: MuPDF keeps
+  a JPEG as the same JPEG, so a 12-megapixel photo costs about as much as the
+  file it came from, and converting it takes about a tenth of a second.
+
+  The layout lives in one place, `Document._images_document()`, and opening a
+  single image now goes through it too. That path still does the obvious thing
+  — one page, shaped like the photo, filling it — which is what it did before.
+
 - `tools/bench_startup.py`, which prints the start-up phase by phase and reports
   which third-party libraries the start-up pulls in. Start-up cost was an
   opinion until there was a way to measure it, and a cost like this is invisible
