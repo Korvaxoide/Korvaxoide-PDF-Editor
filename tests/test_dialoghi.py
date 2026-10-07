@@ -168,32 +168,46 @@ def test_il_dialogo_firma_mostra_tutte_le_opzioni(finestra, documento):
 
 
 def test_il_dialogo_di_conversione_sta_nello_schermo_senza_scorrere(finestra, documento):
-    """Le opzioni di pagina non devono costringere il dialogo a scorrere.
+    """Le opzioni di pagina non devono uscire dal dialogo.
 
-    Le sei coppie di opzioni erano in una fila sola: la larghezza minima del
-    dialogo superava lo schermo, ``adatta_a_schermo`` lo infilava in un'area
-    scorrevole e dentro quella area i pulsanti e le opzioni finivano schiacciati
-    a un pixel di altezza, irraggiungibili.
+    Le sei coppie di opzioni erano in una fila sola: la riga larga 1262px dentro
+    un dialogo di 752px, ``adatta_a_schermo`` lo infilava in un'area scorrevole
+    e i controlli finivano oltre il bordo destro, con i pulsanti schiacciati a
+    una striscia di un pixel. Per arrivarci bisognava scorrare in orizzontale.
+
+    Si controlla dove i controlli arrivano davvero e non la dimensione minima
+    del dialogo: quella la riporta a 90x90 qualunque cosa ci sia dentro, e con
+    lei la verifica passava anche col dialogo rotto.
     """
     dlg = _con_piu_immagini(finestra)
     try:
         dlg.show()
-        for _ in range(6):
+        for _ in range(8):
             QApplication.instance().processEvents()
         schermo = QApplication.instance().primaryScreen().availableGeometry()
-        minimo = dlg.minimumSizeHint()
-        assert minimo.width() <= schermo.width() * 0.94, (
-            f"il dialogo chiede {minimo.width()}px di larghezza su uno schermo "
-            f"di {schermo.width()}px"
+        assert dlg.minimumSizeHint().height() <= schermo.height() * 0.92, (
+            f"il dialogo chiede {dlg.minimumSizeHint().height()}px di altezza "
+            f"su uno schermo di {schermo.height()}px"
         )
-        assert not dlg.property("scroll_adattato"), (
-            "il dialogo si e' annidato in un'area scorrevole: le opzioni non sono raggiungibili"
+        opzioni = dlg.formato.parentWidget()
+        assert opzioni.sizeHint().width() <= dlg.width(), (
+            f"le opzioni di pagina larghe {opzioni.sizeHint().width()}px in un "
+            f"dialogo di {dlg.width()}px: metà fuori, e serve scorrere per reachesarle"
         )
-        # ogni controllo deve avere un'altezza reale, non un pixel
-        for controllo in (dlg.formato, dlg.orientamento, dlg.adattamento,
-                          dlg.margini, dlg.per_pagina, dlg.dpi):
+        controlli = {"Formato": dlg.formato, "Orientamento": dlg.orientamento,
+                     "Adattamento": dlg.adattamento, "Margini": dlg.margini,
+                     "Immagini per pagina": dlg.per_pagina, "Risoluzione": dlg.dpi}
+        for nome, controllo in controlli.items():
             assert controllo.height() >= 20, (
-                f"un controllo delle opzioni è alto {controllo.height()}px: non si può premere"
+                f"«{nome}» è alto {controllo.height()}px: schiacciato e non premibile"
+            )
+            dentro = controllo.mapTo(dlg, controllo.rect().topLeft())
+            assert 0 <= dentro.x() and dentro.x() + controllo.width() <= dlg.width(), (
+                f"«{nome}» sta a x={dentro.x()} in un dialogo largo {dlg.width()}px: "
+                "fuori dalla vista"
+            )
+            assert dentro.y() + controllo.height() <= dlg.height(), (
+                f"«{nome}» è sotto il bordo del dialogo: non si vede"
             )
     finally:
         dlg.close()
