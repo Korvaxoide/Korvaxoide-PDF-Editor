@@ -9,6 +9,7 @@ dimensioni e il suo contenuto minimo entrino nello schermo.
 import pymupdf
 import pytest
 from PySide6.QtCore import QTimer
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QApplication, QDialog, QPushButton, QTabWidget
 
 from pdfeditor.ui.dialogs import props
@@ -168,16 +169,20 @@ def test_il_dialogo_firma_mostra_tutte_le_opzioni(finestra, documento):
 
 
 def test_il_dialogo_di_conversione_sta_nello_schermo_senza_scorrere(finestra, documento):
-    """Le opzioni di pagina non devono uscire dal dialogo.
+    """Le opzioni di pagina non devono uscire dal dialogo, ne' con i caratteri grandi.
 
-    Le sei coppie di opzioni erano in una fila sola: la riga larga 1262px dentro
-    un dialogo di 752px, ``adatta_a_schermo`` lo infilava in un'area scorrevole
-    e i controlli finivano oltre il bordo destro, con i pulsanti schiacciati a
-    una striscia di un pixel. Per arrivarci bisognava scorrare in orizzontale.
+    Le sei coppie di opzioni erano in una riga sola e i sette pulsanti erano
+    tutti in fila: appena il carattere cresce un po' la riga supera il dialogo,
+    ``adatta_a_schermo`` lo infila in un'area scorrevole, i pulsanti si
+    schiacciano a una striscia di un pixel e per arrivare alle opzioni bisogna
+    scorrere in orizzontale.
 
-    Si controlla dove i controlli arrivano davvero e non la dimensione minima
-    del dialogo: quella la riporta a 90x90 qualunque cosa ci sia dentro, e con
-    lei la verifica passava anche col dialogo rotto.
+    Su Linux i caratteri sono piccoli e il dialogo sembrava starci; su Windows il
+    gruppo delle opzioni misurava 1032px in un dialogo largo 752px, e la
+    verifica passava lo stesso guardando la dimensione minima del dialogo, che
+    vale 90x90 qualunque cosa ci sia dentro. Per questo la seconda meta' della
+    verifica raddoppia il carattere e guarda dove arrivano i controlli: se il
+    dialogo sta nello schermo solo con i caratteri di Linux, non ci sta.
     """
     dlg = _con_piu_immagini(finestra)
     try:
@@ -190,25 +195,46 @@ def test_il_dialogo_di_conversione_sta_nello_schermo_senza_scorrere(finestra, do
             f"su uno schermo di {schermo.height()}px"
         )
         opzioni = dlg.formato.parentWidget()
-        assert opzioni.sizeHint().width() <= dlg.width(), (
-            f"le opzioni di pagina larghe {opzioni.sizeHint().width()}px in un "
-            f"dialogo di {dlg.width()}px: metà fuori, e serve scorrere per reachesarle"
-        )
         controlli = {"Formato": dlg.formato, "Orientamento": dlg.orientamento,
                      "Adattamento": dlg.adattamento, "Margini": dlg.margini,
                      "Immagini per pagina": dlg.per_pagina, "Risoluzione": dlg.dpi}
-        for nome, controllo in controlli.items():
-            assert controllo.height() >= 20, (
-                f"«{nome}» è alto {controllo.height()}px: schiacciato e non premibile"
-            )
-            dentro = controllo.mapTo(dlg, controllo.rect().topLeft())
-            assert 0 <= dentro.x() and dentro.x() + controllo.width() <= dlg.width(), (
-                f"«{nome}» sta a x={dentro.x()} in un dialogo largo {dlg.width()}px: "
-                "fuori dalla vista"
-            )
-            assert dentro.y() + controllo.height() <= dlg.height(), (
-                f"«{nome}» è sotto il bordo del dialogo: non si vede"
-            )
+
+        def _problema() -> str:
+            """Il primo difetto trovato, o una stringa vuota se sta tutto."""
+            largo = opzioni.sizeHint().width()
+            if largo > dlg.width():
+                return (f"le opzioni larghe {largo}px in un dialogo di {dlg.width()}px: "
+                        "metà fuori, e serve scorrere per reachesarle")
+            # i pulsanti non stanno tutti in fila: si guarda la larghezza della
+            # riga piu' affollata, che e' quella che altrimenti esce da sola
+            larghezze = sorted((b.sizeHint().width() for b in dlg.findChildren(QPushButton)
+                                if b.text() not in ("Converti", "Annulla", "Cancel")),
+                               reverse=True)
+            affollata = sum(larghezze[:3])
+            if affollata + 24 > dlg.width():
+                return (f"tre pulsanti affiancati larghi {affollata}px in un dialogo di "
+                        f"{dlg.width()}px: verrebbero schiacciati")
+            for nome, controllo in controlli.items():
+                if controllo.height() < 20:
+                    return f"«{nome}» è alto {controllo.height()}px: non si può premere"
+                dentro = controllo.mapTo(dlg, controllo.rect().topLeft())
+                if dentro.x() < 0 or dentro.x() + controllo.width() > dlg.width():
+                    return (f"«{nome}» sta a x={dentro.x()} in un dialogo di {dlg.width()}px: "
+                            "fuori dalla vista")
+                if dentro.y() + controllo.height() > dlg.height():
+                    return f"«{nome}» è sotto il bordo del dialogo: non si vede"
+            return ""
+
+        problema = _problema()
+        assert not problema, problema
+
+        grande = QFont(dlg.font())
+        grande.setPointSize(max(grande.pointSize(), 1) * 2)
+        dlg.setFont(grande)
+        for _ in range(8):
+            QApplication.instance().processEvents()
+        problema = _problema()
+        assert not problema, f"con i caratteri raddoppiati: {problema}"
     finally:
         dlg.close()
         for _ in range(2):

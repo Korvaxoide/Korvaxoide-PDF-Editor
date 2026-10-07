@@ -1348,38 +1348,46 @@ class ImagesToPdfDialog(QDialog):
             self._aggiungi(Path(f))
         self._aggiorna_riepilogo()
 
-    def _barra_pulsanti(self) -> QHBoxLayout:
-        row = QHBoxLayout()
-        b_add = QPushButton(tr("Aggiungi…"))
-        b_add.clicked.connect(self._scegli)
-        b_rm = QPushButton(tr("Rimuovi"))
-        b_rm.clicked.connect(self._rimuovi)
-        b_clear = QPushButton(tr("Svuota"))
-        b_clear.clicked.connect(self._svuota)
-        b_up = QPushButton(tr("Sposta su"))
-        b_up.clicked.connect(lambda: self._sposta(-1))
-        b_down = QPushButton(tr("Sposta giù"))
-        b_down.clicked.connect(lambda: self._sposta(1))
-        b_nome = QPushButton(tr("Ordina per nome"))
-        b_nome.clicked.connect(lambda: self._ordina("nome"))
-        b_data = QPushButton(tr("Ordina per data"))
-        b_data.clicked.connect(lambda: self._ordina("data"))
-        for b in (b_add, b_rm, b_clear, b_up, b_down, b_nome, b_data):
-            row.addWidget(b)
-        row.addStretch(1)
-        return row
+    def _barra_pulsanti(self) -> QGridLayout:
+        """I comandi sulla lista, su tre file invece che uno.
+
+        Sette pulsanti in fila sono piu' larghi del dialogo appena il carattere
+        e' un po' piu' grande del solito, e la riga si schiaccia a un pixel:
+        le voci si mettono su tre file, che non crescono con il font.
+        """
+        g = QGridLayout()
+        comandi = (
+            (tr("Aggiungi…"), self._scegli),
+            (tr("Rimuovi"), self._rimuovi),
+            (tr("Svuota"), self._svuota),
+            (tr("Sposta su"), lambda: self._sposta(-1)),
+            (tr("Sposta giù"), lambda: self._sposta(1)),
+            (tr("Ordina per nome"), lambda: self._ordina("nome")),
+            (tr("Ordina per data"), lambda: self._ordina("data")),
+        )
+        for posizione, (testo, slot) in enumerate(comandi):
+            b = QPushButton(testo)
+            b.clicked.connect(slot)
+            g.addWidget(b, posizione // 3, posizione % 3)
+        g.setColumnStretch(3, 1)
+        return g
 
     def _barra_opzioni(self) -> QGroupBox:
-        """Le opzioni di pagina, in un gruppo con due colonne.
+        """Le opzioni di pagina, una sotto l'altra.
 
-        Non in una fila sola: sei coppie di etichetta e controllo in fila
-        occuperebbero una larghezza che il dialogo non riesce a tenere nello
-        schermo, e a quel punto si autoannida in un'area scorrevole e tutto
-        si schiaccia. In due colonne la larghezza resta quella di una coppia.
+        Non in griglia a due colonne e non in fila: con i controlli uno per
+        riga la larghezza dipende solo dalla voce piu' lunga e resta contenuta
+        anche con i caratteri grandi, mentre a due colonne la somma delle due
+        colonne superava lo schermo e le opzioni finivano fuori dal dialogo.
+        Anche i menu a tendina sono larghi il minimo: senza, la larghezza
+        del dialogo la dettava la voce piu' lunga dell'elenco, cioe' il nome
+        di un formato carta.
         """
         gruppo = QGroupBox(tr("Disposizione sulla pagina"))
-        griglia = QGridLayout(gruppo)
+        f = QFormLayout(gruppo)
         self.formato = QComboBox()
+        self.formato.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.formato.setMinimumContentsLength(14)
         for codice, etichetta in self.formati():
             self.formato.addItem(etichetta, codice)
         self.formato.setCurrentIndex(max(0, self.formato.findData("A4")))
@@ -1412,18 +1420,16 @@ class ImagesToPdfDialog(QDialog):
         self.dpi.setSuffix(" dpi")
         self.dpi.setToolTip(tr("Risoluzione con cui viene stampata l'immagine"))
         self.dpi.setEnabled(False)
-        sinistra = ((tr("Formato"), self.formato),
-                    (tr("Orientamento"), self.orientamento),
-                    (tr("Immagini per pagina"), self.per_pagina))
-        destra = ((tr("Adattamento"), self.adattamento),
-                  (tr("Margini"), self.margini),
-                  (tr("Risoluzione"), self.dpi))
-        for colonna, coppie in enumerate((sinistra, destra)):
-            for riga, (etichetta, controllo) in enumerate(coppie):
-                griglia.addWidget(QLabel(etichetta), riga, colonna * 2)
-                griglia.addWidget(controllo, riga, colonna * 2 + 1)
-        griglia.setColumnStretch(1, 1)
-        griglia.setColumnStretch(3, 1)
+        for etichetta, controllo in (
+            (tr("Formato"), self.formato),
+            (tr("Orientamento"), self.orientamento),
+            (tr("Adattamento"), self.adattamento),
+            (tr("Margini"), self.margini),
+            (tr("Immagini per pagina"), self.per_pagina),
+            (tr("Risoluzione"), self.dpi),
+        ):
+            f.addRow(etichetta, controllo)
+        f.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.formato.currentIndexChanged.connect(self._opzioni_disponibili)
         self.adattamento.currentIndexChanged.connect(self._opzioni_disponibili)
         self.per_pagina.valueChanged.connect(lambda _v: self._opzioni_disponibili())
