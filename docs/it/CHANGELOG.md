@@ -16,6 +16,14 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ### Corretto
 
+- **Il catalogo inglese ora è incluso nei binari.** `KorvaxoidePDF.spec`
+  copiava solo `resources/icons` e `resources/fonts`, quindi
+  `resources/lang/en.json` mancava sia dall'AppImage sia dall'`.exe`. La voce
+  *Lingua ▸ English* traduceva soltanto i pulsanti standard di Qt, le cui `.qm`
+  arrivano dall'hook, mentre le stringhe dell'applicazione restavano in
+  italiano. Lo spec ora copia anche `resources/lang`, e un test statico
+  confronta le cartelle di risorse lette a runtime con quelle incluse.
+
 - **`build_windows.ps1` non produce più un eseguibile che non si avvia.** Su
   Python 3.15 pip rifiuta di installare PySide6 6.11.2 (`Requires-Python
   >=3.10,<3.15`), PowerShell non considerava fatale il codice di uscita di pip
