@@ -14,6 +14,8 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ## Non pubblicato
 
+## 0.1.2 — 2026-11-04
+
 ### Sicurezza
 
 - **Pillow aggiornato da 12.3.0 a 13.0.0**, chiudendo tutti i 41 avvisi

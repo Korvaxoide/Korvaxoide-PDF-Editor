@@ -14,6 +14,8 @@ the *About* window all read it from there.
 
 ## Unreleased
 
+## 0.1.2 — 2026-11-04
+
 ### Security
 
 - **Pillow updated from 12.3.0 to 13.0.0**, closing all 41 Dependabot
