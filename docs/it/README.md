@@ -95,8 +95,8 @@ quelli elencati nella pagina delle release. Ogni release ha anche il link
 
 ### Avviare dalla sorgente
 
-Serve **Python 3.12 o successivo**: è il requisito di NumPy, e senza non si
-possono installare le dipendenze.
+Serve **Python da 3.12 a 3.14**: 3.12 è il minimo di NumPy, e PySide6 6.11.2
+non supporta la 3.15, sulla quale le dipendenze non si installano.
 
 Dipendenze (`requirements.txt`):
 
@@ -140,7 +140,7 @@ repository: `venv/bin/python -m tools.make_icons` scrive `resources/icons/`, e
 `resources/korvaxoide-pdf-editor.desktop` è una voce di menu già pronta che
 punta a `run.sh`.
 
-**Windows.** Serve Python 3.12 o successivo, installato dall'[installer
+**Windows.** Serve Python da 3.12 a 3.14, installato dall'[installer
 ufficiale](https://www.python.org/downloads/windows/) con l'opzione **Add
 python.exe to PATH** spuntata. Estrarre la cartella e:
 

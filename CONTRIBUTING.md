@@ -30,7 +30,8 @@ python3 -m venv venv
 ./venv/bin/python -m pdfeditor
 ```
 
-Python 3.12 or later is required. The dependencies are in `requirements.txt`.
+Python 3.12 to 3.14 is required (3.15 is not supported by PySide6 6.11.2). The
+dependencies are in `requirements.txt`.
 
 For the tests you also need:
 

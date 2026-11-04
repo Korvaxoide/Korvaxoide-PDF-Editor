@@ -14,6 +14,16 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ## Non pubblicato
 
+### Corretto
+
+- **`build_windows.ps1` non produce più un eseguibile che non si avvia.** Su
+  Python 3.15 pip rifiuta di installare PySide6 6.11.2 (`Requires-Python
+  >=3.10,<3.15`), PowerShell non considerava fatale il codice di uscita di pip
+  e lo script proseguiva compilando un `.exe` da 10 MB senza PySide6, Pillow né
+  PyMuPDF. Ora accetta solo Python 3.12–3.14, si ferma al primo passo fallito e
+  carica tutte le dipendenze prima di compilare. Anche `run.bat` controlla il
+  limite superiore.
+
 ## 0.1.2 — 2026-11-04
 
 ### Sicurezza

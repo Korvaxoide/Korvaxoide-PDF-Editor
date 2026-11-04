@@ -96,8 +96,8 @@ which is the matching source of that exact binary.
 
 ### Running from source
 
-**Python 3.12 or later** is required: it is NumPy's requirement, and without it
-the dependencies cannot be installed.
+**Python 3.12 to 3.14** is required: 3.12 is NumPy's minimum, and PySide6
+6.11.2 does not support 3.15, so on 3.15 the dependencies cannot be installed.
 
 Dependencies (`requirements.txt`):
 
@@ -141,7 +141,7 @@ repository: `venv/bin/python -m tools.make_icons` writes `resources/icons/`, and
 `resources/korvaxoide-pdf-editor.desktop` is a ready-made menu entry pointing
 at `run.sh`.
 
-**Windows.** Python 3.12 or later, installed from the
+**Windows.** Python 3.12 to 3.14, installed from the
 [official installer](https://www.python.org/downloads/windows/) with the
 **Add python.exe to PATH** option ticked. Extract the folder and:
 

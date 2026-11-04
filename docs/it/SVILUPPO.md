@@ -27,7 +27,8 @@ python3 -m venv venv
 ./venv/bin/python -m pdfeditor
 ```
 
-Serve Python 3.12 o successivo. Le dipendenze sono in `requirements.txt`.
+Serve Python da 3.12 a 3.14 (la 3.15 non è supportata da PySide6 6.11.2). Le
+dipendenze sono in `requirements.txt`.
 
 Per i controlli servono anche:
 

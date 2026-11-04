@@ -14,6 +14,16 @@ the *About* window all read it from there.
 
 ## Unreleased
 
+### Fixed
+
+- **`build_windows.ps1` no longer produces an executable that cannot start.**
+  On Python 3.15 pip refuses to install PySide6 6.11.2 (`Requires-Python
+  >=3.10,<3.15`), PowerShell did not treat pip's exit code as fatal, and the
+  script went on to build a 10 MB `.exe` without PySide6, Pillow or PyMuPDF.
+  It now accepts only Python 3.12–3.14, fails at the first failing step, and
+  loads every dependency before compiling. `run.bat` checks the upper bound
+  too.
+
 ## 0.1.2 — 2026-11-04
 
 ### Security
