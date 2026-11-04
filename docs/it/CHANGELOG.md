@@ -14,6 +14,17 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ## Non pubblicato
 
+### Sicurezza
+
+- **Pillow aggiornato da 12.3.0 a 13.0.0**, chiudendo tutti i 41 avvisi
+  Dependabot aperti sul repository. Riguardavano, tra gli altri, overflow del
+  buffer heap nei decoder JPEG, TIFF e FlashPix, use-after-free e double free
+  negli encoder delle immagini, aggiramenti della protezione dalle bombe di
+  decompressione nei loader multi-frame, ricorsione senza limite nel parser PDF
+  e argument injection nella chiamata a Ghostscript usata dal plugin EPS.
+  L'applicazione non usa nessuna delle API rimosse o modificate, quindi non è
+  servita alcuna modifica al codice.
+
 ### Cambiato
 
 - **Il programma parte sensibilmente più in fretta.** Misurato con

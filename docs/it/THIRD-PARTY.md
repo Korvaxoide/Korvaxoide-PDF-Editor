@@ -33,7 +33,7 @@ questo file, nel README e nelle intestazioni dei sorgenti.
 |---|---|---|---|
 | [PyMuPDF](https://pymupdf.readthedocs.io/) | 1.28.2 | **AGPL-3.0** (o commerciale Artifex) | Motore PDF: rendering, annotazioni, campi, testo, redazione |
 | [PySide6](https://doc.qt.io/qtforpython/) (Qt 6) | 6.11.2 | LGPL-3.0 (anche GPL-2.0/3.0) | Interfaccia grafica |
-| [Pillow](https://python-pillow.org/) | 12.3.0 | MIT-CMU | Immagini, rendering e rimozione dello sfondo |
+| [Pillow](https://python-pillow.org/) | 13.0.0 | MIT-CMU | Immagini, rendering e rimozione dello sfondo |
 | [NumPy](https://numpy.org/) | 2.5.3 | BSD-3-Clause | Calcolo per la rimozione dello sfondo e l'analisi delle immagini |
 | [cryptography](https://cryptography.io/) | 50.0.1 | Apache-2.0 **o** BSD-3-Clause | Chiavi e operazioni crittografiche per la firma digitale |
 | [asn1crypto](https://github.com/wbond/asn1crypto) | 1.5.1 | MIT | Lettura e scrittura del CMS (PKCS#7) |
