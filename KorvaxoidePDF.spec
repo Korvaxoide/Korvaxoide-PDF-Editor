@@ -101,7 +101,8 @@ datas: list[tuple[str, str]] = []
 binaries: list[tuple[str, str]] = []
 
 for cartella, destinazione in (("resources/icons", "resources/icons"),
-                               ("resources/fonts", "resources/fonts")):
+                               ("resources/fonts", "resources/fonts"),
+                               ("resources/lang", "resources/lang")):
     src = ROOT / cartella
     if src.is_dir():
         for f in src.iterdir():

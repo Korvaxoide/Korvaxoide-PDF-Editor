@@ -16,6 +16,14 @@ the *About* window all read it from there.
 
 ### Fixed
 
+- **The English catalogue is now included in the packaged binaries.**
+  `KorvaxoidePDF.spec` copied only `resources/icons` and `resources/fonts`, so
+  `resources/lang/en.json` was missing from both the AppImage and the `.exe`.
+  Choosing *Language ▸ English* translated only Qt's standard buttons, whose
+  `.qm` files come from the hook, while the application strings stayed Italian.
+  The spec now also copies `resources/lang`, and a static test compares the
+  runtime resource folders with the ones the spec bundles.
+
 - **`build_windows.ps1` no longer produces an executable that cannot start.**
   On Python 3.15 pip refuses to install PySide6 6.11.2 (`Requires-Python
   >=3.10,<3.15`), PowerShell did not treat pip's exit code as fatal, and the
