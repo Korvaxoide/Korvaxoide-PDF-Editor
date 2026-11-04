@@ -14,6 +14,16 @@ the *About* window all read it from there.
 
 ## Unreleased
 
+### Security
+
+- **Pillow updated from 12.3.0 to 13.0.0**, closing all 41 Dependabot
+  advisories open on the repository. They covered, among others, heap buffer
+  overflows in the JPEG, TIFF and FlashPix decoders, use-after-free and double
+  free in the image encoders, decompression-bomb bypasses in the multi-frame
+  loaders, unbounded recursion in the PDF parser, and argument injection in the
+  Ghostscript call used by the EPS plugin. The application does not use any of
+  the removed or changed APIs, so no code changes were needed.
+
 ### Changed
 
 - **The program starts noticeably faster.** Measured with

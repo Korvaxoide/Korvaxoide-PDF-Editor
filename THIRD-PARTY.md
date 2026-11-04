@@ -34,7 +34,7 @@ README and in the source headers has to be removed.
 |---|---|---|---|
 | [PyMuPDF](https://pymupdf.readthedocs.io/) | 1.28.2 | **AGPL-3.0** (or Artifex commercial) | PDF engine: rendering, annotations, fields, text, redaction |
 | [PySide6](https://doc.qt.io/qtforpython/) (Qt 6) | 6.11.2 | LGPL-3.0 (also GPL-2.0/3.0) | Graphical interface |
-| [Pillow](https://python-pillow.org/) | 12.3.0 | MIT-CMU | Images, rendering, signature background removal |
+| [Pillow](https://python-pillow.org/) | 13.0.0 | MIT-CMU | Images, rendering, signature background removal |
 | [NumPy](https://numpy.org/) | 2.5.3 | BSD-3-Clause | Computation for background removal and image analysis |
 | [cryptography](https://cryptography.io/) | 50.0.1 | Apache-2.0 **or** BSD-3-Clause | Keys and cryptographic operations for digital signatures |
 | [asn1crypto](https://github.com/wbond/asn1crypto) | 1.5.1 | MIT | Reading and writing CMS (PKCS#7) |
