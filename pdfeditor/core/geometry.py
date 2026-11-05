@@ -9,11 +9,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-import pymupdf
-
-Rect = pymupdf.Rect
-Point = pymupdf.Point
-Matrix = pymupdf.Matrix
+from pymupdf import Matrix, Rect
+from pymupdf import Point as Point  # riesportato: lo usano i test
 
 ALIGN_H = ("left", "center", "right", "justify")
 ALIGN_V = ("top", "center", "bottom")
