@@ -536,10 +536,12 @@ posizione, unendo i blocchi della stessa riga.
    Il formato è `MAJOR.MINOR.PATCH` e un controllo lo verifica.
 3. Aggiornare il conteggio dei test nel README.
 4. Icone: `./venv/bin/python -m tools.make_icons`
-5. Linux: `./build_linux.sh --onedir` (AppImage con `appimagetool`)
-6. Windows: `.\build_windows.ps1`, che dà un file singolo. `-OneDir` dà invece la
-   cartella portatile: pubblicala solo se è quello che vuoi, perché non è ciò
-   che scarica la gente.
+5. Prova locale facoltativa, Linux: `./build_linux.sh --onedir` (AppImage con
+   `appimagetool`).
+6. Prova locale facoltativa, Windows: `.\build_windows.ps1`, che dà un file
+   singolo. `-OneDir` dà invece la cartella portatile: pubblicala solo se è
+   quello che vuoi, perché non è ciò che scarica la gente. Il tag compila
+   entrambi i file da solo, quindi questi due passi sono solo una prova.
 7. Aggiornare l'elenco delle licenze in `THIRD-PARTY.md`.
 8. Aggiornare `CHANGELOG.md`: rinominare l'intestazione `## Non pubblicato` in
    `## <versione> — <data>` e rimetterne una vuota e nuova sopra. Le voci si
@@ -550,8 +552,13 @@ posizione, unendo i blocchi della stessa riga.
    corrente, quindi il passo 2 e questo non possono andare staccati.
 9. Commit con un messaggio che spieghi la causa, non solo il sintomo.
 10. Tag git con la versione: `git tag -a v0.1.0 -m "Korvaxoide PDF Editor 0.1.0"`.
-    Il tag e` quello che rende facile rispettare l'obbligo di sorgente dell'AGPL:
-    la pagina del rilascio offre il sorgente corrispondente con un clic.
+    `.github/workflows/rilascio.yml` controlla che il tag coincida con
+    `__version__`, compila l'AppImage su Linux e l'`.exe` su Windows, scrive
+    `SHA256SUMS` e pubblica la release con quei tre file. Non serve compilare
+    né caricare niente a mano; se un job fallisce, correggi la causa e rilancialo
+    dalla pagina Actions. Il tag e` quello che rende facile rispettare l'obbligo
+    di sorgente dell'AGPL: la pagina del rilascio offre il sorgente
+    corrispondente con un clic.
 
 La versione `0.1.0` è la prima numerata: prima della versione era `1.0.0` di
 default e non voleva dire niente, perché il programma non era mai stato

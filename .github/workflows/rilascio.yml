@@ -1,0 +1,214 @@
+name: Rilascio
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag da pubblicare (es. v0.1.3)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  versione:
+    name: Controlla la versione
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.controllo.outputs.tag }}
+      versione: ${{ steps.controllo.outputs.versione }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+
+      - name: Il tag coincide con __version__
+        id: controllo
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Il tag '$TAG' non ha la forma vX.Y.Z"
+            exit 1
+          fi
+          versione="${TAG#v}"
+          dichiarata="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' pdfeditor/__init__.py)"
+          if [ "$versione" != "$dichiarata" ]; then
+            echo "::error::Il tag $TAG non coincide con __version__ = \"$dichiarata\""
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "versione=$versione" >> "$GITHUB_OUTPUT"
+          echo "Tag $TAG coerente con pdfeditor.__version__ = $dichiarata"
+
+  linux:
+    name: AppImage (Linux)
+    needs: versione
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.versione.outputs.tag }}
+
+      - name: Librerie di sistema per Qt
+        run: |
+          set -e
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes \
+            libegl1 libgl1 libfontconfig1 libdbus-1-3 \
+            libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 \
+            libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 \
+            fonts-liberation
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Scarica appimagetool
+        run: |
+          set -euo pipefail
+          mkdir -p .tools
+          # L'asset "continuous" non ha un numero di versione: l'hash fissa
+          # esattamente il binario usato il 2026-11-04. Se un giorno cambia,
+          # il controllo fallisce prima di eseguirlo, invece di costruire una
+          # AppImage con uno strumento diverso da quello previsto.
+          curl -sSfL --retry 3 --retry-delay 5 \
+            -o .tools/appimagetool \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          echo "b90f4a8b18967545fda78a445b27680a1642f1ef9488ced28b65398f2be7add2  .tools/appimagetool" \
+            | sha256sum -c -
+          chmod +x .tools/appimagetool
+
+      - name: Compila l'AppImage
+        env:
+          # AppImage su un runner GitHub: senza FUSE il runtime non si
+          # aggancia, e APPIMAGE_EXTRACT_AND_RUN lo fa estrarre ed eseguire.
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          set -euo pipefail
+          export PATH="$PWD/.tools:$PATH"
+          ./build_linux.sh
+          test -f "dist/KorvaxoidePDF-${{ needs.versione.outputs.versione }}-x86_64.AppImage"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: dist/*.AppImage
+          if-no-files-found: error
+          retention-days: 7
+
+  windows:
+    name: Eseguibile (Windows)
+    needs: versione
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.versione.outputs.tag }}
+
+      - uses: actions/setup-python@v7
+        with:
+          # Non 3.15: PySide6 6.11.2 dichiara Requires-Python <3.15 e la
+          # build produrrebbe un eseguibile incompleto.
+          python-version: "3.14"
+          cache: pip
+
+      - name: Compila l'eseguibile
+        shell: pwsh
+        run: .\build_windows.ps1
+
+      - name: Controlla l'eseguibile
+        shell: pwsh
+        env:
+          VERSIONE: ${{ needs.versione.outputs.versione }}
+        run: |
+          $percorso = "dist\KorvaxoidePDF-$env:VERSIONE.exe"
+          if (-not (Test-Path $percorso)) {
+              throw "Eseguibile non trovato: $percorso"
+          }
+          $mb = [math]::Round((Get-Item $percorso).Length / 1MB, 1)
+          Write-Host "Eseguibile: $percorso ($mb MB)"
+          # Un file da 10 MB e' quello che produceva la build senza PySide6:
+          # se compare di nuovo, meglio fermarsi prima di pubblicarlo.
+          if ($mb -lt 50) {
+              throw "L'eseguibile pesa solo $mb MB: la build e' incompleta."
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: dist/KorvaxoidePDF-${{ needs.versione.outputs.versione }}.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Pubblica la release
+    needs: [versione, linux, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.versione.outputs.tag }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Calcola SHA256SUMS
+        run: |
+          set -euo pipefail
+          cd dist
+          ls -l
+          sha256sum ./*.AppImage ./*.exe > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Prepara le note dal CHANGELOG
+        env:
+          VERSIONE: ${{ needs.versione.outputs.versione }}
+        run: |
+          set -euo pipefail
+          python - "$VERSIONE" <<'EOF'
+          import pathlib
+          import re
+          import sys
+
+          versione = sys.argv[1]
+          testo = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
+          blocco = re.search(
+              rf"^## {re.escape(versione)}\b[^\n]*\n(.*?)(?=^## |\Z)",
+              testo,
+              re.MULTILINE | re.DOTALL,
+          )
+          if blocco is None:
+              raise SystemExit(f"CHANGELOG.md non ha una sezione per la versione {versione}")
+
+          # I digest sono già stati calcolati: metterli anche nel corpo della
+          # release evita di doverli cercare nel file SHA256SUMS per confrontarli
+          # con un download.
+          righe = ["", "## Download", "", "| File | sha256 |", "| --- | --- |"]
+          for riga in pathlib.Path("dist/SHA256SUMS").read_text(encoding="utf-8").splitlines():
+              digest, nome = riga.split(None, 1)
+              righe.append(f"| `{nome.strip()}` | `{digest}` |")
+          note = blocco.group(1).strip() + "\n" + "\n".join(righe) + "\n"
+          pathlib.Path("note.md").write_text(note, encoding="utf-8")
+          EOF
+
+      - name: Crea la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.versione.outputs.tag }}
+          VERSIONE: ${{ needs.versione.outputs.versione }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            dist/*.AppImage dist/*.exe dist/SHA256SUMS \
+            --verify-tag \
+            --title "Korvaxoide PDF Editor $VERSIONE" \
+            --notes-file note.md
