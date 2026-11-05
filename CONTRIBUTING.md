@@ -537,10 +537,12 @@ position, joining the blocks of the same line.
    `MAJOR.MINOR.PATCH` and a test checks it.
 3. Update the test count in the README.
 4. Icons: `./venv/bin/python -m tools.make_icons`
-5. Linux: `./build_linux.sh --onedir` (AppImage with `appimagetool`)
-6. Windows: `.\build_windows.ps1`, which gives a single file. `-OneDir` gives the
-   portable folder instead: publish that only if you mean to, because it is not
-   what people download.
+5. Optional local check, Linux: `./build_linux.sh --onedir` (AppImage with
+   `appimagetool`).
+6. Optional local check, Windows: `.\build_windows.ps1`, which gives a single
+   file. `-OneDir` gives the portable folder instead: publish that only if you
+   mean to, because it is not what people download. The tag builds both files
+   automatically, so these two steps are only a smoke test.
 7. Update the licences list in `THIRD-PARTY.md`.
 8. Update `CHANGELOG.md`: rename the `## Unreleased` heading to
    `## <version> — <date>` and put a fresh empty `## Unreleased` above it. The
@@ -551,8 +553,13 @@ position, joining the blocks of the same line.
    `__version__`, so step 2 and this one cannot get out of step.
 9. Commit with a message that explains the cause, not only the symptom.
 10. Tag the release: `git tag -a v0.1.0 -m "Korvaxoide PDF Editor 0.1.0"`, then
-    push the tag. The tag is what makes the AGPL source obligation easy to
-    meet: the release page offers the matching source in one click.
+    push the tag. `.github/workflows/rilascio.yml` checks that the tag matches
+    `__version__`, builds the AppImage on Linux and the `.exe` on Windows,
+    writes `SHA256SUMS`, and publishes the release with those three assets.
+    There is no manual build or upload; if a job fails, fix the cause and
+    re-run it from the Actions page. The tag is what makes the AGPL source
+    obligation easy to meet: the release page offers the matching source in one
+    click.
 
 Version `0.1.0` is the first numbered one: before it the version was `1.0.0` by
 default and meant nothing, because the program had never been published.
