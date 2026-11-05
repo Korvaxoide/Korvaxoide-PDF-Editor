@@ -25,6 +25,7 @@ from typing import Any
 import pymupdf
 
 from ..core.i18n import tr
+from ..core.log import log
 
 SIGNATURE_BYTE = 0x20  # spazio:byte innocuo che può restare nel segnaposto
 PLACEHOLDER_LEN = 16384  # spazio riservato in /Contents (esadecimale)
@@ -1214,6 +1215,7 @@ def verify_file(path: str | os.PathLike[str]) -> list[dict[str, Any]]:
                         info["integrity"] = "firma non valida"
                         info["valid"] = False
                 except Exception as exc:
+                    log.debug("Verifica della firma non riuscita", exc_info=True)
                     info["integrity"] = f"verifica impossibile ({type(exc).__name__})"
                     # senza questo la voce restava con ``valid`` a True
                     # impostato da ``_parse_cms``: il pannello diceva «firma

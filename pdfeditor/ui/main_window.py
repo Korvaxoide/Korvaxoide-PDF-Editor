@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import tempfile
 import time
 import webbrowser
@@ -37,6 +38,7 @@ from ..core.i18n import tr
 from ..core import settings as settingsmod
 from ..core import textlayout
 from ..core import units
+from ..core.log import log
 from ..features import digitalsign
 from ..signature import manager as sigmanager
 from . import icons, panels, theme, toolbars
@@ -455,6 +457,9 @@ class MainWindow(QMainWindow):
         self._mi(m, tr("Scorciatoie da tastiera"), "F1", self.action_shortcuts)
         self._mi(m, tr("Informazioni su {app}").format(app=__app_name__), None, self.action_about)
         self._mi(m, tr("Licenze di terze parti"), None, self.action_third_party)
+        m.addSeparator()
+        self._mi(m, tr("Apri la cartella dei log"), None, self.action_open_logs)
+        self._mi(m, tr("Esporta il log…"), None, self.action_export_log)
 
     def _titolo_menu(self, titolo: str) -> str:
         """Il titolo di un menu, tradotto, con l'acceleratore rimesso a posto.
@@ -2533,6 +2538,52 @@ class MainWindow(QMainWindow):
             "Le licenze delle dipendenze sono nel file THIRD-PARTY.md<br><br>"
             "Nessun documento lascia il computer: il programma non usa la rete.",
         )
+
+    def action_open_logs(self) -> None:
+        """Apre nel file manager la cartella dei log dell'utente."""
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+
+        cartella = log.log_dir()
+        try:
+            cartella.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            QMessageBox.warning(
+                self,
+                tr("Cartella dei log"),
+                tr("Impossibile aprire la cartella dei log: {errore}").format(errore=exc),
+            )
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(cartella)))
+
+    def action_export_log(self) -> None:
+        """Copia il file di log corrente dove sceglie l'utente."""
+        origine = log.log_file()
+        if not origine.is_file():
+            QMessageBox.information(
+                self,
+                tr("Esporta il log…"),
+                tr("Non c'è ancora un file di log da esportare."),
+            )
+            return
+        destinazione, _ = QFileDialog.getSaveFileName(
+            self,
+            tr("Esporta il log…"),
+            str(origine),
+            tr("File di log (*.log);;Tutti i file (*)"),
+        )
+        if not destinazione:
+            return
+        try:
+            shutil.copy2(origine, destinazione)
+        except OSError as exc:
+            QMessageBox.warning(
+                self,
+                tr("Esporta il log…"),
+                tr("Impossibile esportare il log: {errore}").format(errore=exc),
+            )
+            return
+        self._status(tr("Log esportato in {percorso}").format(percorso=destinazione))
 
     def action_third_party(self) -> None:
         """Mostra le licenze delle dipendenze in una finestra.

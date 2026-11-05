@@ -20,6 +20,7 @@ from PySide6.QtWidgets import QWidget
 
 from ..core import document as docmod
 from ..core.i18n import tr
+from ..core.log import log
 
 
 def print_document(parent: QWidget, doc: docmod.Document, dpi: int = 300) -> None:
@@ -371,4 +372,5 @@ def available_printers() -> list[str]:
     try:
         return [p.printerName() for p in QPrinterInfo.availablePrinters()]
     except Exception:
+        log.debug("Elenco delle stampanti non disponibile", exc_info=True)
         return []

@@ -32,6 +32,18 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
   carica tutte le dipendenze prima di compilare. Anche `run.bat` controlla il
   limite superiore.
 
+### Aggiunto
+
+- **Log locale e gestione dei crash.** Il programma scrive ora un log ruotato
+  nella propria cartella dati (`~/.local/share/korvaxoide-pdf-editor/logs` su
+  Linux, `%APPDATA%\KorvaxoidePDF\logs` su Windows), conservando tre file da
+  512 KiB. Le eccezioni non gestite, comprese quelle dei thread di lavoro,
+  finiscono nel log con il traceback invece di sparire; `KORVAXOIDE_LOG=debug`
+  registra più dettagli. Il menu *Aiuto* apre la cartella dei log o esporta il
+  file corrente. I log restano sulla macchina, non vengono inviati da nessuna
+  parte e non contengono contenuti dei documenti, valori dei campi, password o
+  percorsi delle firme.
+
 ## 0.1.2 — 2026-11-04
 
 ### Sicurezza
