@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import datetime as _dt
 from pathlib import Path
 from typing import Any, Sequence
 
 import pymupdf
-from PySide6.QtCore import QDate, QSize, Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -28,10 +27,8 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
     QPlainTextEdit,
-    QProgressBar,
     QPushButton,
     QSlider,
-    QRadioButton,
     QSpinBox,
     QTabWidget,
     QTextEdit,
@@ -39,11 +36,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import util as dlgutil
 from ...core import document as docmod
 from ...core import i18n, textlayout, units
 from ...core.i18n import tr
 from .. import icons, theme
+from . import util as dlgutil
 
 
 def _nome_lingua(codice: str, nome: str) -> str:
@@ -348,7 +345,7 @@ class MarkerStyleDialog(QDialog):
         v.addWidget(QLabel(tr("Tipo")))
         v.addWidget(self.mode)
         grid = QGridLayout()
-        for n, (name, col) in enumerate(self.PRESETS.items()):
+        for n, (_, col) in enumerate(self.PRESETS.items()):
             b = QPushButton()
             b.setFixedSize(52, 30)
             b.setStyleSheet(f"background: {col}; border: 1px solid {theme.LIGHT.border_strong};")

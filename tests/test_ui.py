@@ -7,12 +7,9 @@ from pathlib import Path
 
 import pymupdf
 import pytest
-from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QImage, QPainter
 from PySide6.QtWidgets import QApplication
 
-from pdfeditor.core import geometry as geo
-from pdfeditor.core import settings as sm
 from pdfeditor.core.document import Document
 from pdfeditor.ui import panels, theme, thumbnails
 from pdfeditor.ui.page_view import PdfView
@@ -564,8 +561,9 @@ def test_la_licenza_agpl_e_sempre_quello_del_programma():
     ridistribuito. Se un domani la licenza cambiasse, il file LICENSE e questa
     finestra dovrebbero dirlo insieme.
     """
-    import pdfeditor
     from pathlib import Path
+
+    import pdfeditor
 
     assert pdfeditor.__license__ == "AGPL-3.0-or-later"
     root = Path(__file__).resolve().parents[1]

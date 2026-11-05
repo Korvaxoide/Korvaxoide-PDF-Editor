@@ -10,7 +10,8 @@ import pymupdf
 import pytest
 from PIL import Image
 
-from pdfeditor.core import document, geometry as geo
+from pdfeditor.core import document
+from pdfeditor.core import geometry as geo
 from pdfeditor.core.document import Document, DocumentError
 
 
@@ -251,7 +252,7 @@ def test_eliminazione_annotazione(doc: Document):
 def test_collegamento_non_e_annotazione(doc: Document):
     doc.add_annot(0, "link", pymupdf.Rect(50, 50, 200, 70), text="https://esempio.it")
     assert len(doc.annots(0, include_widgets=False)) == 0
-    assert any(l["uri"] == "https://esempio.it" for l in doc.links(0))
+    assert any(link["uri"] == "https://esempio.it" for link in doc.links(0))
 
 
 def test_spostare_un_annotazione_non_la_ingrandisce(doc: Document):
@@ -342,7 +343,7 @@ def test_flag_del_campo(doc: Document):
 
 
 def test_campo_firma(doc: Document):
-    xref = doc.add_field(0, "signature", pymupdf.Rect(50, 50, 300, 100), name="firma")
+    doc.add_field(0, "signature", pymupdf.Rect(50, 50, 300, 100), name="firma")
     f = [x for x in doc.fields() if x.name == "firma"][0]
     assert f.type == "Signature" and f.kind == "signature"
 
@@ -1368,7 +1369,7 @@ def test_cambiare_la_dimensione_di_piu_pagine_insieme(doc: Document):
 
 def test_dimensione_pagina_non_valida_rifiutata(doc: Document):
     for cattivo in ((0, 400), (400, 0), (-10, 400)):
-        with pytest.raises(Exception):
+        with pytest.raises(DocumentError):
             doc.set_page_size([0], *cattivo)
     assert abs(doc.page_info(0).rect.width - 595) <= 1, "una dimensione invalida ha modificato la pagina"
 

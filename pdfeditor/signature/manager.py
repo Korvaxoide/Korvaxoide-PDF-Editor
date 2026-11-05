@@ -27,7 +27,8 @@ from ..core.settings import data_dir
 if TYPE_CHECKING:
     from PIL import Image
 
-    from . import bgremove, render, strokes as sk, typed
+    from . import bgremove, typed
+    from . import strokes as sk
 
 
 def library_dir() -> Path:

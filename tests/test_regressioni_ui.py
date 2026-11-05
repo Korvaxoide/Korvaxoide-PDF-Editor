@@ -107,7 +107,7 @@ def test_il_rettangolo_cade_dove_e_stato_disegnato(finestra_pagina, rot):
     assert annots, "nessuna annotazione creata"
     mostrato = _mostrato(finestra, 0, annots[0]["rect"])
     for ottenuto, atteso in zip(
-        (mostrato.x0, mostrato.y0, mostrato.x1, mostrato.y1), (100, 100, 220, 190)
+        (mostrato.x0, mostrato.y0, mostrato.x1, mostrato.y1), (100, 100, 220, 190), strict=False
     ):
         assert abs(ottenuto - atteso) <= 2.0, (
             f"rot={rot}: riquadro {mostrato} invece di (100, 100, 220, 190)"
@@ -123,7 +123,7 @@ def test_la_linea_collega_i_due_punti_disegnati(finestra_pagina, rot):
     assert annots, f"rot={rot}: nessuna linea creata"
     vertici = annots[0]["vertices"]
     assert len(vertici) >= 2
-    for punto, (atteso_x, atteso_y) in zip(vertici[:2], ((80, 80), (300, 260))):
+    for punto, (atteso_x, atteso_y) in zip(vertici[:2], ((80, 80), (300, 260)), strict=False):
         mostrato = finestra.doc.to_display_rect(0, geo.Rect(*punto, *punto))
         assert abs(mostrato.x0 - atteso_x) <= 2 and abs(mostrato.y0 - atteso_y) <= 2, (
             f"rot={rot}: vertice {punto} cade in {mostrato}"
@@ -194,7 +194,7 @@ def test_ridimensionare_dal_centro_con_alt(zona, punto, atteso):
 
     ottenuto = _resize_rect(geo.Rect(100, 100, 200, 180), zona, QPointF(*punto), Qt.AltModifier)
     for ottenuto_v, atteso_v in zip(
-        (ottenuto.x0, ottenuto.y0, ottenuto.x1, ottenuto.y1), atteso
+        (ottenuto.x0, ottenuto.y0, ottenuto.x1, ottenuto.y1), atteso, strict=False
     ):
         assert abs(ottenuto_v - atteso_v) <= 1.0, f"{zona}: {ottenuto} invece di {atteso}"
 
@@ -353,7 +353,7 @@ def test_invio_chiude_l_editor_del_campo(finestra_pagina):
 
 def test_il_pulsante_di_opzione_sceglie_una_sola_opzione(finestra_pagina):
     finestra = finestra_pagina(0)
-    figli = finestra.doc.add_radio_group(
+    finestra.doc.add_radio_group(
         0, [geo.Rect(40, 100, 58, 118), geo.Rect(66, 100, 84, 118)], "grp"
     )
     finestra.view.load_field_states()
@@ -429,7 +429,6 @@ def test_la_firma_trascinata_non_diventa_nera(finestra_pagina):
     for passo in range(2):
         immagini = finestra.doc.image_rects(0)
         assert immagini, f"l'immagine è sparita dopo {passo} spostamenti"
-        xref = immagini[0]["xref"]
         finestra.select_tool("select")
         centro = (200 + 10 * passo, 150)
         _trascina(
@@ -506,7 +505,7 @@ def test_i_commenti_rispondono(finestra_pagina):
     pannello.navigate.connect(lambda page, rect: navigati.append((page, rect)))
     pannello.load(finestra.doc)
     assert pannello.list.count() == 3
-    for riga, atteso in enumerate(("Primo", "Secondo", "Terzo")):
+    for riga, _ in enumerate(("Primo", "Secondo", "Terzo")):
         pannello.list.setCurrentRow(riga)
         pannello._go(pannello.list.item(riga))
     assert len(navigati) == 3, navigati
@@ -540,7 +539,7 @@ def test_correggi_selezionato_funziona_nella_scheda_di_pretampa(finestra_pagina)
         pytest.skip("nessun problema di pre-stampa su questo documento")
     pannello.print_list.setCurrentItem(pannello.print_list.topLevelItem(0))
     QApplication.instance().processEvents()
-    assert pannello._selected_action() != "" or not pannello.fix_button.isEnabled() is False
+    assert pannello._selected_action() != "" or pannello.fix_button.isEnabled() is not False
     if pannello._selected_action():
         assert pannello.fix_button.isEnabled(), (
             "la correzione esiste ma il pulsante resta disabilitato"

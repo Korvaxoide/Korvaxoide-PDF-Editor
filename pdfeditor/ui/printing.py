@@ -191,7 +191,7 @@ def convert_pdfa(doc: docmod.Document, path: str, pages: list[int], level: str =
             "-dPDFA=" + _pdfa_part(level),
             "-dBATCH", "-dNOPAUSE", "-dNOOUTERSAVE", "-dQUIET",
             "-sColorConversionStrategy=RGB",
-            f"-sDEVICE=pdfwrite",
+            "-sDEVICE=pdfwrite",
             # senza questo Ghostscript segnala ogni non conformita' ma produce
             # comunque il file: la conversione risultava «riuscita» anche se il
             # PDF non era valido

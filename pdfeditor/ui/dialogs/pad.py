@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Callable
-
-from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QBrush,
     QColor,
     QFont,
     QPainter,
-    QPainterPath,
     QPen,
     QPixmap,
 )
@@ -215,6 +212,4 @@ class DrawPad(QWidget):
     def resizeEvent(self, event) -> None:  # type: ignore[override]
         super().resizeEvent(event)
         # La firma viene eseguita su una tela fissa: si adatta alle proporzioni.
-        w, h = max(1.0, float(self.width())), max(1.0, float(self.height()))
-        scale = min(w / self.canvas.width, h / self.canvas.height)
         self.update()

@@ -8,9 +8,11 @@ restare nitidi quando la firma viene inserita nel PDF.
 from __future__ import annotations
 
 import io
+
 from PIL import Image, ImageDraw
 
-from . import bgremove, strokes as sk
+from . import bgremove
+from . import strokes as sk
 
 SS = 4  # supercampionamento per il rendering vettoriale
 
@@ -68,10 +70,13 @@ def render_strokes(
         # moltiplicata per la scala e basta. Prima la scala entrava due volte
         # (una nel raggio e una nel raggio del raggio) e a scale 4 una penna da
         # 2,6 punti diventava un blob di 42 pixel.
-        def raggio(indice: int) -> float:
-            if not stroke.style.pressure or not larghezze:
-                return max(0.5, stroke.style.width * scale / 2)
-            w = larghezze[min(indice, len(larghezze) - 1)]
+        # I valori del ciclo si legano come argomenti predefiniti: senza,
+        # la funzione li leggerebbe al momento della chiamata e non
+        # apparterrebbe più al tratto che sta disegnando.
+        def raggio(indice: int, tratto=stroke, spessori=larghezze) -> float:
+            if not tratto.style.pressure or not spessori:
+                return max(0.5, tratto.style.width * scale / 2)
+            w = spessori[min(indice, len(spessori) - 1)]
             return max(0.5, w * scale / 2)
 
         n = len(pts)

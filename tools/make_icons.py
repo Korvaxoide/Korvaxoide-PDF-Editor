@@ -10,7 +10,6 @@ import os
 import struct
 import sys
 import tempfile
-import zlib
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -18,8 +17,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPixmap  # noqa: E402
-
-from pdfeditor.ui import icons  # noqa: E402
 
 OUT = ROOT / "resources" / "icons"
 ACCENT = QColor("#2f6fdb")
@@ -72,9 +69,8 @@ def _draw(size: int) -> QPixmap:
 
 
 def _pen(color: QColor, width: float):
-    from PySide6.QtGui import QPen
-
     from PySide6.QtCore import Qt
+    from PySide6.QtGui import QPen
 
     pen = QPen(color, max(1.0, width))
     pen.setJoinStyle(Qt.RoundJoin)
@@ -125,7 +121,7 @@ def make_ico(pm: QPixmap, path: Path, tmpdir: Path) -> None:
     images = [_png_bytes(pm.scaled(s, s), tmpdir) for s in sizes]
     out = bytearray(struct.pack("<HHH", 0, 1, len(sizes)))
     offset = 6 + 16 * len(sizes)
-    for s, data in zip(sizes, images):
+    for s, data in zip(sizes, images, strict=False):
         out += struct.pack("<BBBBHHII", s % 256, s % 256, 0, 0, 1, 32, len(data), offset)
         offset += len(data)
     for data in images:
@@ -154,7 +150,7 @@ def make_icns(pm: QPixmap, path: Path, tmpdir: Path) -> None:
 
 
 def main() -> int:
-    app = QGuiApplication.instance() or QGuiApplication([])
+    _ = QGuiApplication.instance() or QGuiApplication([])
     OUT.mkdir(parents=True, exist_ok=True)
     grande = _draw(1024)
     grande.save(str(OUT / "korvaxoide_pdf_editor.png"), "PNG")

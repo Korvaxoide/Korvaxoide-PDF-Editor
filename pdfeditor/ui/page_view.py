@@ -2,20 +2,14 @@
 
 from __future__ import annotations
 
-import math
-from typing import Any, Callable
+from typing import Any
 
-from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, Qt, Signal
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, Qt, Signal
 from PySide6.QtGui import (
-    QBrush,
-    QColor,
     QCursor,
     QGuiApplication,
     QKeySequence,
     QPainter,
-    QPalette,
-    QPen,
-    QPixmap,
 )
 from PySide6.QtWidgets import (
     QComboBox,
@@ -26,17 +20,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..core import geometry as geo
 from ..core import document as docmod
-from ..core import units
-from . import icons, theme
+from ..core import geometry as geo
+from . import theme
 from .page_items import (
     LinkItem,
     PageNode,
     SelectionItem,
     TextSelectionItem,
     ToolOverlay,
-    pixmap_to_qpixmap,
 )
 
 # Strumenti disponibili
@@ -192,12 +184,12 @@ class PdfScene(QGraphicsScene):
             node = self.node(i)
             if node is None:
                 continue
-            for l in doc.links(i):
-                r = geo.Rect(l.get("rect") or geo.Rect())
+            for link in doc.links(i):
+                r = geo.Rect(link.get("rect") or geo.Rect())
                 if r.is_empty:
                     continue
-                uri = l.get("uri") or ""
-                interno = l.get("page")
+                uri = link.get("uri") or ""
+                interno = link.get("page")
                 if not uri and interno is None:
                     continue
                 # un collegamento interno porta a un'altra pagina invece che a
@@ -208,7 +200,7 @@ class PdfScene(QGraphicsScene):
                 if not uri and interno is not None:
                     vista = self.view
 
-                    def azione(destinazione=interno):  # type: ignore[misc]
+                    def azione(destinazione=interno, vista=vista):  # type: ignore[misc]
                         vista.go_to_page(destinazione)
                 disp = doc.to_display_rect(i, r)
                 item = LinkItem(self.view, i, self.view._scene_rect(i, disp), etichetta, azione)
@@ -412,7 +404,6 @@ class PdfView(QGraphicsView):
             visible = True if first < 0 else (first <= i <= last)
             n.setVisible(visible)
         if first >= 0:
-            y = first * 0
             node = self.scene_obj.node(first)
             if node is not None:
                 self.centerOn(node.sceneBoundingRect().center())

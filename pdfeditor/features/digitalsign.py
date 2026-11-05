@@ -153,7 +153,7 @@ def make_self_signed(
 def load_certificate(path: str | os.PathLike[str], password: str = "") -> Certificate:
     """Carica un certificato da file PFX/P12 o PEM."""
     from cryptography import x509
-    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.serialization import pkcs12
 
     p = Path(path)
@@ -424,7 +424,6 @@ def _draw_signature_appearance(
     """
     page = doc[page_index]
     x0, y0, x1, y1 = box
-    w = max(40.0, x1 - x0)
     h = max(16.0, y1 - y0)
     size = max(5.0, min(9.0, h * 0.18))
     navy = (0.10, 0.10, 0.40)
@@ -493,10 +492,11 @@ def _build_cms(
     del file e che siano presenti ``contentType`` e ``signingTime``; la firma
     copre tutti gli attributi, quindi aggiungereli dopo invalida l'hash.
     """
-    from asn1crypto import algos, cms, core, x509 as a_x509
+    from asn1crypto import cms, core
+    from asn1crypto import x509 as a_x509
     from asn1crypto.algos import DigestAlgorithm
-    from cryptography.hazmat.primitives import hashes, serialization
     from cryptography import x509
+    from cryptography.hazmat.primitives import serialization
 
     cert_obj = x509.load_pem_x509_certificate(cert.pem)
     key = serialization.load_pem_private_key(cert.key_pem, password=None)
@@ -565,7 +565,7 @@ def _register_pdf_attribute_oids() -> None:
     registrazione non si possono aggiungere motivo, localita' e nome del
     firmatario come attributi firmati.
     """
-    from asn1crypto import cms, core
+    from asn1crypto import cms
 
     cls = cms.CMSAttributeType
     # Le mappe dell'oggetto vengono costruite alla prima istanziazione: senza
@@ -1060,8 +1060,7 @@ def _describe_signature(doc: pymupdf.Document, widget: Any, page: int, raw: byte
 
 def _parse_cms(der: bytes) -> dict[str, Any]:
     """Estrae soggetto, emittente, data e integrita' da un CMS SignedData."""
-    import base64
-    from asn1crypto import cms, core
+    from asn1crypto import cms
 
     info = cms.ContentInfo.load(der)
     if info["content_type"].native != "signed_data":
@@ -1174,10 +1173,6 @@ def _flatten_name(name: Any) -> str:
 
 def verify_file(path: str | os.PathLike[str]) -> list[dict[str, Any]]:
     """Firme presenti con verifica di integrita' e attendibilita'."""
-    from cryptography.exceptions import InvalidSignature
-    from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.asymmetric import ec, padding
-    from cryptography import x509
 
     p = Path(path)
     raw = p.read_bytes()

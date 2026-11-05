@@ -12,7 +12,6 @@ testo viene reso normalmente e si applica solo una lieve inclinazione.
 
 from __future__ import annotations
 
-import math
 import os
 import random
 import sys

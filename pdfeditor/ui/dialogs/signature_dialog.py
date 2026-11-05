@@ -6,21 +6,17 @@ rimozione dello sfondo, quindi inserisce la firma nella pagina scelta.
 
 from __future__ import annotations
 
-import io
 from pathlib import Path
-from typing import Any
 
 from PIL import Image
 from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QColor, QIcon, QImage, QPainter, QPixmap
+from PySide6.QtGui import QIcon, QImage
 from PySide6.QtWidgets import (
-    QApplication,
-    QScrollArea,
     QCheckBox,
-    QDoubleSpinBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -31,6 +27,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSlider,
     QSpinBox,
     QTabWidget,
@@ -40,14 +37,15 @@ from PySide6.QtWidgets import (
 
 from ...core import document as docmod
 from ...core import geometry as geo
-from ...signature import bgremove, manager, render as sigrender, typed
-from ...signature import strokes as sk
-from .. import icons, theme
 from ...core.i18n import tr
+from ...signature import manager, typed
+from ...signature import render as sigrender
+from .. import icons, theme
 from ..page_items import pil_to_qpixmap
 from . import util as dlgutil
 from .bgremove_panel import BackgroundRemovalPanel
 from .pad import DrawPad
+
 
 #: Come in `main_window`: funzione e non costante, perche' la parte leggibile
 #: del filtro e' una frase da tradurre.
@@ -118,7 +116,7 @@ class SignatureDialog(QDialog):
 
         # --- pannello di inserimento ---
         place = QGroupBox(tr("Inserimento nel documento"))
-        g = QGrid = QFormLayout(place)
+        g = QFormLayout(place)
         self.cb_page = QComboBox()
         for i in range(self.doc.page_count):
             self.cb_page.addItem(f"Pagina {i + 1}", i)

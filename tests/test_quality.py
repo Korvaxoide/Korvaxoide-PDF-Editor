@@ -74,7 +74,6 @@ def test_segnala_immagine_senza_testo_alternativo_solo_se_davvero_mancante():
     costruisce un documento strutturato con una figura senza descrizione e una
     con descrizione, e si verifica che venga segnalata solo la prima.
     """
-    povero: Document
     d = Document()
     d.new(595, 842)
     d.insert_image(0, pymupdf.Rect(50, 120, 545, 400), _immagine(300, 200), keep_proportion=False)

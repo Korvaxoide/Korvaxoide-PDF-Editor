@@ -238,7 +238,6 @@ def text_rects(
 ) -> list[pymupdf.Rect]:
     """Riquadri occupati da ogni riga, utili per evidenziare le corrispondenze."""
     lay = layout_text(text, fontname, fontsize, box.width)
-    asc = baseline_offset(fontname, fontsize)
     out = []
     y = box.y0
     for line in lay.lines:

@@ -13,11 +13,8 @@ import tempfile
 from pathlib import Path
 from typing import Sequence
 
-import pymupdf
-
-from ..core.i18n import tr
-
 from ..core import document as docmod
+from ..core.i18n import tr
 
 # Dove cercare l'eseguibile su Windows
 _WINDOWS_CANDIDATES = (

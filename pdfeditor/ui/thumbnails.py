@@ -2,24 +2,20 @@
 
 from __future__ import annotations
 
-from typing import Callable
-
-from PySide6.QtCore import QMimeData, QPoint, QRect, QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QDrag, QFont, QPainter, QPen, QPixmap
-from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QModelIndex, QPoint, QRect, QSize, Qt, Signal
+from PySide6.QtGui import QAction, QColor, QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QStyle,
-    QStyleOptionViewItem,
-    QStyledItemDelegate,
     QListWidget,
     QListWidgetItem,
     QMenu,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
     QWidget,
 )
 
 from ..core import document as docmod
-from ..core import units
 from . import icons, theme
 from .page_items import pixmap_to_qpixmap
 

@@ -30,10 +30,9 @@ from typing import Any, Callable, Protocol, Sequence
 import pymupdf
 
 from . import geometry as geo
-from . import textlayout
-from . import units
-from .i18n import tr
+from . import textlayout, units
 from .history import Command, HistoryStack
+from .i18n import tr
 from .log import log
 
 MIB = 1024 * 1024
@@ -1793,17 +1792,17 @@ class Document:
         """
         out = []
         try:
-            for l in self.page(index).get_links() or ():
-                r = l.get("from")
+            for link in self.page(index).get_links() or ():
+                r = link.get("from")
                 if r is None:
                     continue
                 box = geo.Rect(r)
                 if box.is_empty:
                     continue
-                if l.get("uri"):
-                    out.append({"uri": l["uri"], "rect": box, "page": None})
-                elif l.get("kind") == pymupdf.LINK_GOTO and l.get("page", -1) >= 0:
-                    out.append({"uri": "", "rect": box, "page": int(l["page"])})
+                if link.get("uri"):
+                    out.append({"uri": link["uri"], "rect": box, "page": None})
+                elif link.get("kind") == pymupdf.LINK_GOTO and link.get("page", -1) >= 0:
+                    out.append({"uri": "", "rect": box, "page": int(link["page"])})
         except Exception:
             pass
         return out
@@ -2870,7 +2869,6 @@ class Document:
             # accese piu' opzioni contemporaneamente e il campo padre
             # continuava a riportare «Off».
             return self.select_radio(page_index, xref)
-        page = self.page(page_index)
 
         def _op() -> None:
             pg = self.page(page_index)

@@ -5,39 +5,31 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
-import time
 import webbrowser
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QPoint, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QCloseEvent, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
     QDockWidget,
     QFileDialog,
-    QFrame,
-    QHBoxLayout,
     QLabel,
     QMainWindow,
     QMessageBox,
     QProgressBar,
-    QPushButton,
-    QSplitter,
     QStatusBar,
     QTabWidget,
-    QVBoxLayout,
     QWidget,
 )
 
 from .. import __app_name__, __repo_url__, __version__
 from ..core import document as docmod
 from ..core import geometry as geo
-from ..core import i18n
-from ..core.i18n import tr
+from ..core import i18n, textlayout
 from ..core import settings as settingsmod
-from ..core import textlayout
-from ..core import units
+from ..core.i18n import tr
 from ..core.log import log
 from ..features import digitalsign
 from ..signature import manager as sigmanager
@@ -53,7 +45,6 @@ from .page_view import AREA_CLIC, PdfView
 if TYPE_CHECKING:
     from PIL import Image
 
-    from .dialogs import props
 
 #: I filtri delle finestre di dialogo sono funzioni e non costanti: la parte
 #: leggibile e' una frase da tradurre, e in una costante di modulo la lingua
@@ -316,6 +307,7 @@ class MainWindow(QMainWindow):
                 self.panel_quality,
             ),
             panels.NOMI_SCHEDE,
+            strict=False,
         ):
             self.tabs.addTab(w, tr(label))
         # i controlli di qualita' rasterizzano le pagine: si eseguono quando la
@@ -997,7 +989,6 @@ class MainWindow(QMainWindow):
             if path:
                 self._export_pdfa(path, pages, v["pdfa"])
             return
-        default_name = f"{self.doc.path.stem}_p{pages[0] + 1}.png" if self.doc.path else "pagina.png"
         folder = QFileDialog.getExistingDirectory(self, "Cartella di destinazione", self._start_dir())
         if not folder:
             return
@@ -1691,8 +1682,8 @@ class MainWindow(QMainWindow):
         self._status(tr("Fai clic dove inserire il collegamento"))
 
     def _open_link(self, uri: str) -> None:
-        from PySide6.QtGui import QDesktopServices
         from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
 
         if uri.startswith("http://") or uri.startswith("https://") or uri.startswith("mailto:"):
             if QMessageBox.question(self, tr("Collegamento"), f"Aprire nel browser?\n\n{uri}") == QMessageBox.Yes:

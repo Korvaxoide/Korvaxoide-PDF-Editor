@@ -6,12 +6,13 @@ import io
 import math
 from pathlib import Path
 
+import ambiente
 import numpy as np
 import pytest
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-import ambiente
-from pdfeditor.signature import bgremove, manager, render, strokes as sk, typed
+from pdfeditor.signature import bgremove, manager, render, typed
+from pdfeditor.signature import strokes as sk
 
 # il font della firma di prova: su Windows non c'e' nessun Liberation e senza
 # un font la foto sarebbe bianca, la rimozione dello sfondo cancellerebbe
@@ -73,7 +74,6 @@ def test_il_punto_troppo_vicino_viene_ignorato():
 
 
 def test_smoothing_riduce_le_oscillazioni():
-    c = sk.SignatureCanvas()
     st = sk.Stroke(style=sk.StrokeStyle(smoothing=0.5))
     for i in range(20):
         st.add(i * 3, 10 + (6 if i % 2 else -6))
@@ -192,7 +192,7 @@ def test_mantieni_colore_versus_grigio():
     b = np.asarray(
         bgremove.remove_background(photo, bgremove.RemovalSettings(method="white", keep_color=False))
     )
-    r, gg, bb = (b[:, :, 0][b[:, :, 3] > 200], b[:, :, 1][b[:, :, 3] > 200], b[:, :, 2][b[:, :, 3] > 200])
+    r, gg, _ = (b[:, :, 0][b[:, :, 3] > 200], b[:, :, 1][b[:, :, 3] > 200], b[:, :, 2][b[:, :, 3] > 200])
     # diventa grigia
     assert abs(float(r.mean()) - float(gg.mean())) < 20
 

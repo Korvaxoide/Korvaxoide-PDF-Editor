@@ -1,6 +1,5 @@
 """Prova di integrazione della finestra principale (headless)."""
 
-import os
 import sys
 from pathlib import Path
 
@@ -68,7 +67,6 @@ check("pagina creata", w.doc.page_count == 1)
 check("nodi scena creati", w.view.page_count() == 1)
 
 print("\n== inserimento testo ==")
-import pymupdf
 
 from pdfeditor.core import geometry as geo  # noqa: E402
 
@@ -121,7 +119,7 @@ check("ellisse presente", "Circle" in types)
 check("inchiostro presente", "Ink" in types)
 check("freccia presente", "Line" in types)
 check("nota presente", "Text" in types)
-check("collegamento presente", any(l["uri"].startswith("https://") for l in w.doc.links(0)),
+check("collegamento presente", any(link["uri"].startswith("https://") for link in w.doc.links(0)),
       w.doc.links(0))
 check("evidenziazione presente", "Highlight" in types)
 check("poligono presente", "Polygon" in types)
@@ -140,8 +138,10 @@ check("evidenziazione creata", len(hl) >= 1, f"{len(hl)}")
 print("\n== firma (mouse, tastiera, immagine) ==")
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
+from pdfeditor.signature import bgremove, typed  # noqa: E402
 from pdfeditor.signature import manager as sigman  # noqa: E402
-from pdfeditor.signature import bgremove, render as sigrender, strokes as sk, typed  # noqa: E402
+from pdfeditor.signature import render as sigrender  # noqa: E402
+from pdfeditor.signature import strokes as sk  # noqa: E402
 
 lib = sigman.SignatureLibrary(folder=TMP / "siglib")
 
@@ -274,7 +274,7 @@ check("firma verificata", bool(ver) and ver[0].get("valid") is True,
       ver[0].get("integrity") if ver else "nessuna firma")
 # la manomissione avviene dentro il primo intervallo firmato: il testo e'
 # compresso, quindi si altera un byte noto (l'inizio del corpo della pagina)
-import re as _re
+import re as _re  # noqa: E402
 
 tampered = TMP / "manomesso.pdf"
 raw = bytearray(signed.read_bytes())

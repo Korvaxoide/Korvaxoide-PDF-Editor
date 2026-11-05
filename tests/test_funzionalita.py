@@ -5,16 +5,12 @@ risultati non siinfluenzano. Un controllo che non richiama il pulsante
 dell'interfaccia verifica comunque l'azione di menu corrispondente.
 """
 
-import os
 
 import pymupdf
 import pytest
-from PySide6.QtCore import QPointF, Qt
+from PySide6.QtCore import QPointF, Qt, QTimer
 from PySide6.QtTest import QTest
-from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QDialog, QMessageBox, QWidget
-
-from pdfeditor.core import geometry as geo
 
 MODELLI = "modelli_senza_dialogo.txt"
 
@@ -390,7 +386,7 @@ def _al_centro(pagina):
 
 
 def _quasiuguale(a, b, tol=6):
-    return all(abs(x - y) <= tol for x, y in zip(a, b))
+    return all(abs(x - y) <= tol for x, y in zip(a, b, strict=False))
 
 
 def test_converti_una_immagine(app_pulita, tmp_path):
@@ -411,7 +407,7 @@ def test_converti_una_foto_per_pagina(app_pulita, tmp_path):
     app_pulita.doc.images_to_pdf(out, _foto_ordinate(tmp_path, [(200, 0, 0), (0, 200, 0), (0, 0, 200)]))
     generato = _apri(out)
     assert generato.page_count == 3
-    for pagina, atteso in zip(generato, [(200, 0, 0), (0, 200, 0), (0, 0, 200)]):
+    for pagina, atteso in zip(generato, [(200, 0, 0), (0, 200, 0), (0, 0, 200)], strict=False):
         assert _quasiuguale(_al_centro(pagina), atteso), "le foto non sono nell'ordine scelto"
 
 
@@ -1188,7 +1184,7 @@ def test_un_collegamento_interno_porta_alla_pagina(finestra, documento_modello):
     finestra.select_tool("select")
     for _ in range(2):
         QApplication.instance().processEvents()
-    interni = [l for l in finestra.view.scene_obj.links if l.azione is not None]
+    interni = [link for link in finestra.view.scene_obj.links if link.azione is not None]
     assert interni, "il collegamento alla pagina 2 non e' diventato cliccabile"
     finestra._goto_page(0)
     for _ in range(2):
@@ -1685,7 +1681,6 @@ def test_il_testo_della_pagina_nuova(app_pulita):
 
 def test_la_qualita_jpeg_raggiunge_il_file(app_pulita):
     """La qualità scelta nell'esportazione deve cambiare il file prodotto."""
-    from PySide6.QtWidgets import QFileDialog
 
     alta = app_pulita.doc.extract_page_image(0, dpi=100, fmt="jpg", quality=95)
     bassa = app_pulita.doc.extract_page_image(0, dpi=100, fmt="jpg", quality=20)
@@ -1738,8 +1733,9 @@ def test_la_stampa_mostra_un_messaggio(app_pulita, monkeypatch):
 
 def test_stampa_con_risoluzione_zero(app_pulita):
     """Una stampante che non conosce la propria risoluzione non deve bloccare."""
-    from pdfeditor.ui import printing
     from PySide6.QtPrintSupport import QPrinter
+
+    from pdfeditor.ui import printing
 
     stampante = QPrinter(QPrinter.HighResolution)
     stampante.setResolution(0)

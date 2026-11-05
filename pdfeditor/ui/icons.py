@@ -704,8 +704,6 @@ def _crop(s: float, c: str) -> None:
         p.setBrush(Qt.NoBrush)
         p.drawRect(QRectF(s * 0.16, s * 0.16, s * 0.68, s * 0.68))
         p.setPen(QPen(QColor(c), s * 0.09, Qt.SolidLine, Qt.RoundCap))
-        for pt in ((0.3, 0.14), (0.3, 0.86), (0.14, 0.3), (0.86, 0.3)):
-            pass
         p.drawLine(QPointF(s * 0.3, s * 0.16), QPointF(s * 0.3, s * 0.34))
         p.drawLine(QPointF(s * 0.7, s * 0.16), QPointF(s * 0.7, s * 0.34))
         p.drawLine(QPointF(s * 0.3, s * 0.66), QPointF(s * 0.3, s * 0.84))
