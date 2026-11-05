@@ -94,7 +94,11 @@ class Settings:
                 json.dumps(self._data, indent=2, ensure_ascii=False), encoding="utf-8"
             )
         except OSError:
-            pass
+            # Le preferenze non sono vitali: il programma continua con i
+            # valori in memoria, ma il motivo del mancato salvataggio resta.
+            from .log import log
+
+            log.debug("Salvataggio delle preferenze non riuscito", exc_info=True)
 
     def get(self, key: str, default: Any = None) -> Any:
         return self._data.get(key, DEFAULTS.get(key, default))

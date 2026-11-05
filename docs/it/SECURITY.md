@@ -38,6 +38,16 @@ conversione PDF/A con Ghostscript, elaborazione di un allegato, verifica di
 una firma digitale. Un difetto in queste zone è interessante anche se non
 permette di prendere il controllo della macchina.
 
+## I log
+
+Il programma tiene un log locale nella propria cartella dati, accanto alle
+preferenze e alle firme salvate. Non viene inviato da nessuna parte: il
+programma non usa la rete. Il log può contenere il percorso di un file aperto e
+il traceback di un'eccezione inattesa, ma non contenuti dei documenti, valori
+dei campi, password o percorsi delle firme. Allegalo a una segnalazione solo se
+sei d'accordo a condividere quei percorsi, e togli le righe che non vuoi
+pubblicare.
+
 ## Il modello di minaccia
 
 - **Il documento è l'input ostile.** Un PDF può arrivare da qualunque fonte.

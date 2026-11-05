@@ -36,6 +36,15 @@ link, OCR with `tesseract`, PDF/A conversion with Ghostscript, processing an
 attachment, verifying a digital signature. A defect in those areas is
 interesting even if it does not grant control of the machine.
 
+## Logs
+
+The program keeps a local log in its data folder, next to preferences and saved
+signatures. It is never sent anywhere: the program does not use the network.
+The log can contain the path of an opened file and the traceback of an
+unexpected exception, but not document contents, field values, passwords or
+signature paths. Attach it to a report only if you are comfortable sharing
+those paths, and remove the lines you do not want to publish.
+
 ## Threat model
 
 - **The document is untrusted input.** A PDF can arrive from any source.

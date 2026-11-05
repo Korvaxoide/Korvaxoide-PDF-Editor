@@ -32,6 +32,17 @@ the *About* window all read it from there.
   loads every dependency before compiling. `run.bat` checks the upper bound
   too.
 
+### Added
+
+- **A local log and a crash handler.** The program now writes a rotating log
+  in its data folder (`~/.local/share/korvaxoide-pdf-editor/logs` on Linux,
+  `%APPDATA%\KorvaxoidePDF\logs` on Windows), keeping three files of 512 KiB.
+  Unexpected exceptions, including those raised in worker threads, are written
+  with their traceback instead of disappearing; `KORVAXOIDE_LOG=debug` records
+  more detail. The *Help* menu can open the logs folder or export the current
+  file. Logs stay on the machine, are never sent anywhere, and contain no
+  document contents, field values, passwords or signature paths.
+
 ## 0.1.2 — 2026-11-04
 
 ### Security

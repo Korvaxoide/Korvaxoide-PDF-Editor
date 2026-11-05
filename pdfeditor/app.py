@@ -6,6 +6,8 @@ import os
 import sys
 from pathlib import Path
 
+from .core import log
+
 
 def _precarica_pymupdf() -> None:
     """Carica MuPDF prima di Qt, per una ragione che vale la pena conoscere.
@@ -35,7 +37,8 @@ def _precarica_pymupdf() -> None:
     except Exception:
         # Senza MuPDF il programma non parte, ma è `core.document` a dirlo con
         # un messaggio suo: qui non si deve coprire un errore che non c'è.
-        pass
+        # La traccia resta nel log: senza, l'unica notizia sarebbe «non parte».
+        log.debug("Precaricamento di PyMuPDF non riuscito", exc_info=True)
 
 
 def _prepare_environment() -> None:
@@ -110,6 +113,9 @@ def _percorso_pyinstaller() -> Path:
 
 def run(argv: list[str] | None = None) -> int:
     """Avvia l'editor; restituisce il codice di uscita."""
+    # Prima di tutto il resto: se l'avvio fallisce, il log deve già esistere.
+    log.setup()
+    log.install_excepthook()
     argv = list(argv if argv is not None else sys.argv)
     _prepare_environment()
     for p in ("resources", "pdfeditor/resources"):
@@ -124,6 +130,7 @@ def run(argv: list[str] | None = None) -> int:
     from .ui import icons, theme
     from .ui.main_window import MainWindow
 
+    log.info("Avvio di %s %s su %s", __app_name__, __version__, sys.platform)
     QApplication.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings, True)
     app = QApplication(argv)
 
@@ -152,6 +159,7 @@ def run(argv: list[str] | None = None) -> int:
 
     for arg in argv[1:]:
         if arg.lower().endswith(".pdf") and Path(arg).exists():
+            log.info("Apertura del documento da riga di comando: %s", arg)
             win.load_path(arg)
             break
     return app.exec()

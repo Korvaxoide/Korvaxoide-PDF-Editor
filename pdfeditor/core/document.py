@@ -34,6 +34,7 @@ from . import textlayout
 from . import units
 from .i18n import tr
 from .history import Command, HistoryStack
+from .log import log
 
 MIB = 1024 * 1024
 UNDO_BUDGET = 220 * MIB
@@ -79,12 +80,12 @@ class EventBus:
             try:
                 fn(*args)
             except Exception:
-                pass
+                log.debug("Sottoscrittore dell'evento %s non riuscito", name, exc_info=True)
         for fn in list(self._any):
             try:
                 fn(name, args)
             except Exception:
-                pass
+                log.debug("Osservatore dell'evento %s non riuscito", name, exc_info=True)
 
 
 # --------------------------------------------------------------------------- dati
@@ -403,6 +404,7 @@ class Document:
         except pymupdf.EmptyFileError as exc:
             raise DocumentError("File vuoto o non valido.") from exc
         except Exception as exc:
+            log.debug("Apertura del documento non riuscita: %s", p, exc_info=True)
             raise DocumentError(
                     tr("Impossibile aprire il file: {errore}").format(errore=exc)
                 ) from exc
@@ -475,7 +477,7 @@ class Document:
             try:
                 self.doc.close()
             except Exception:
-                pass
+                log.debug("Chiusura del documento non riuscita", exc_info=True)
         self.doc = None
         self.path = None
         self.dirty = False
@@ -490,7 +492,7 @@ class Document:
             try:
                 self.doc.close()
             except Exception:
-                pass
+                log.debug("Chiusura del documento precedente non riuscita", exc_info=True)
         self.doc = doc
         self._view_rot = {}
         self._invalidate_caches()
@@ -918,6 +920,7 @@ class Document:
             else:
                 self._salva_completo(doc, target)
         except Exception as exc:
+            log.debug("Salvataggio del documento non riuscito: %s", target, exc_info=True)
             raise DocumentError(
                 tr("Salvataggio non riuscito: {errore}").format(errore=exc)
             ) from exc
