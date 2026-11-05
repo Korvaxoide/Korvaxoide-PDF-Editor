@@ -126,7 +126,8 @@ def run(argv: list[str] | None = None) -> int:
     from PySide6.QtWidgets import QApplication
 
     from . import __app_id__, __app_name__, __org_name__, __version__
-    from .core import i18n, settings as settingsmod
+    from .core import i18n
+    from .core import settings as settingsmod
     from .ui import icons, theme
     from .ui.main_window import MainWindow
 

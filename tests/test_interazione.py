@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import pathlib
 
+import ambiente
 import pymupdf
 import pytest
 from PySide6.QtCore import QPoint, QPointF, Qt, QTimer
@@ -18,16 +19,11 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
-    QLineEdit,
     QMessageBox,
-    QPlainTextEdit,
     QToolBar,
 )
 
-import ambiente
-from pdfeditor.core import geometry as geo
 from pdfeditor.ui.main_window import MainWindow
-
 
 # ----------------------------------------------------------------- strumenti
 
@@ -422,7 +418,6 @@ def test_ruota_pagina_dalla_barra(utente: Utente):
 
 def test_apri_e_salva(utente: Utente, tmp_path):
     """Salvare deve scrivere il file e segnarlo come non modificato."""
-    import pathlib
 
     from PySide6.QtWidgets import QFileDialog
 

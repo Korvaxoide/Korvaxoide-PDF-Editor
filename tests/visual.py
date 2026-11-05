@@ -1,6 +1,5 @@
 """Cattura la finestra principale per la verifica visiva."""
 
-import os
 import sys
 from pathlib import Path
 
@@ -17,9 +16,10 @@ import pymupdf  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from pdfeditor.core import geometry as geo  # noqa: E402
 from pdfeditor.core import settings as sm  # noqa: E402
-from pdfeditor.signature import bgremove, render as sigrender, strokes as sk, typed  # noqa: E402
+from pdfeditor.signature import bgremove  # noqa: E402
+from pdfeditor.signature import render as sigrender  # noqa: E402
+from pdfeditor.signature import strokes as sk  # noqa: E402
 from pdfeditor.ui import theme  # noqa: E402
 from pdfeditor.ui.main_window import MainWindow  # noqa: E402
 

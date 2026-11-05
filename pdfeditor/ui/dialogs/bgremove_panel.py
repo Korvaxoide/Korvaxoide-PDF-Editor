@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 
 import numpy as np
 from PIL import Image
@@ -23,10 +22,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...core.i18n import tr
 from ...signature import bgremove
 from .. import theme
-from ...core.i18n import tr
 from ..page_items import pil_to_qpixmap
+
 
 def methods() -> tuple[tuple[str, str], ...]:
     """Le tecniche di rimozione, con l'etichetta tradotta.
@@ -435,7 +435,7 @@ class _Preview(QWidget):
         rect = QRect(0, 0, half, self.height() - 20)
         avail_w, avail_h = max(1, rect.width() - 8), max(1, rect.height() - 24)
         scale = min(avail_w / self.original.width, avail_h / self.original.height, 3.0)
-        w, h = self.original.width * scale, self.original.height * scale
+        w = self.original.width * scale
         ox = rect.x() + (rect.width() - w) / 2
         oy = rect.y() + 20
         px = int((event.position().x() - ox) / max(scale, 1e-6))

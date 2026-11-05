@@ -57,7 +57,7 @@ def test_caricamento_certificato_pem(tmp_path: Path, certificato: ds.Certificate
 
 
 def test_caricamento_certificato_inesistente(tmp_path: Path):
-    with pytest.raises(Exception):
+    with pytest.raises(FileNotFoundError):
         ds.load_certificate(tmp_path / "non_esiste.pem")
 
 
@@ -260,7 +260,7 @@ def test_algoritmi_cifratura(sorgente: Path, tmp_path: Path):
 @pytest.fixture()
 def modulo_con_campo_firma(sorgente: Path, tmp_path: Path) -> Path:
     """Modulo con un campo firma vuoto, come in un documento ricevuto."""
-    from pdfeditor.core.document import Document, DocumentError
+    from pdfeditor.core.document import Document
 
     d = Document()
     d.new(595, 842)
@@ -293,7 +293,7 @@ def test_firma_in_campo_esistente(modulo_con_campo_firma: Path, certificato: ds.
     assert firme[0]["location"] == "Milano"
 
     # nessun campo firma aggiuntivo e valore del campo di testo intatto
-    from pdfeditor.core.document import Document, DocumentError
+    from pdfeditor.core.document import Document
 
     d = Document()
     d.open(out)
@@ -355,7 +355,7 @@ def test_ricerca_campo_firma_per_xref(modulo_con_campo_firma: Path, certificato:
 
 def test_due_firme_in_campi_diversi(sorgente: Path, certificato: ds.Certificate, tmp_path: Path):
     """Due campi distinti vengono firmati in modo indipendente."""
-    from pdfeditor.core.document import Document, DocumentError
+    from pdfeditor.core.document import Document
 
     d = Document()
     d.open(sorgente)

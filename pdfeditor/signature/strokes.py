@@ -198,7 +198,7 @@ def resample(points: Sequence[Point], step: float) -> list[Point]:
     out: list[Point] = [points[0]]
     carry = 0.0
     ultimo = points[-1]
-    for (x0, y0), (x1, y1) in zip(points, points[1:]):
+    for (x0, y0), (x1, y1) in zip(points, points[1:], strict=False):
         seg = math.hypot(x1 - x0, y1 - y0)
         if seg <= 1e-9:
             continue

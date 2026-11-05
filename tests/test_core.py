@@ -7,8 +7,7 @@ import pytest
 
 from pdfeditor.core import geometry as geo
 from pdfeditor.core import textlayout, units
-from pdfeditor.core.history import HistoryStack, MacroCommand, Command
-
+from pdfeditor.core.history import Command, HistoryStack, MacroCommand
 
 # ----------------------------------------------------------------- geometria
 

@@ -7,7 +7,6 @@ ricerca, pagine, firma digitale, cifratura, stampa ed esportazione.
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -23,14 +22,14 @@ ambiente.prepara_percorso()
 import pymupdf  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 from PySide6.QtCore import QTimer  # noqa: E402
-from PySide6.QtGui import QImage, QPainter  # noqa: E402
 from PySide6.QtWidgets import QApplication, QMessageBox  # noqa: E402
 
 from pdfeditor.core import document as docmod  # noqa: E402
 from pdfeditor.core import geometry as geo  # noqa: E402
 from pdfeditor.core import settings as sm  # noqa: E402
 from pdfeditor.features import digitalsign as ds  # noqa: E402
-from pdfeditor.signature import bgremove, render, strokes as sk, typed  # noqa: E402
+from pdfeditor.signature import bgremove, render, typed  # noqa: E402
+from pdfeditor.signature import strokes as sk  # noqa: E402
 from pdfeditor.ui import theme  # noqa: E402
 from pdfeditor.ui.main_window import MainWindow  # noqa: E402
 
@@ -192,7 +191,7 @@ per_pagina = {i: w.doc.image_rects(i) for i in range(w.doc.page_count)}
 totale = sum(len(v) for v in per_pagina.values())
 check("tre firme inserite", totale == 3, f"{totale} immagini")
 sovrapposte = 0
-for pagina, voci in per_pagina.items():
+for _pagina, voci in per_pagina.items():
     rects = [pymupdf.Rect(r["rect"]) for r in voci]
     for i in range(len(rects)):
         for j in range(i + 1, len(rects)):

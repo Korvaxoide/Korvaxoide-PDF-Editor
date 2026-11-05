@@ -12,15 +12,14 @@ import os
 import subprocess
 from pathlib import Path
 
+import ambiente
 import numpy as np
 import pymupdf
 import pytest
 from PIL import Image, ImageDraw
 
-import ambiente
 from pdfeditor.core import geometry as geo
 from pdfeditor.core.document import Document, DocumentError
-
 
 # ------------------------------------------------------------------ utilità
 
@@ -517,7 +516,9 @@ def test_lo_spessore_del_tratto_cresce_come_la_penna(scala: float):
     più spesso del dovuto: a scala 4 una penna normale diventava una macchia.
     """
     import numpy as np
-    from pdfeditor.signature import render, strokes as sk
+
+    from pdfeditor.signature import render
+    from pdfeditor.signature import strokes as sk
 
     tela = sk.SignatureCanvas(width=200.0, height=60.0)
     tratto = tela.new_stroke(10, 30, 2.6)
@@ -534,7 +535,8 @@ def test_lo_spessore_del_tratto_cresce_come_la_penna(scala: float):
 
 
 def test_la_firma_opaca_viene_ritagliata_lo_stesso():
-    from pdfeditor.signature import render, strokes as sk
+    from pdfeditor.signature import render
+    from pdfeditor.signature import strokes as sk
 
     tela = sk.SignatureCanvas(width=600.0, height=220.0)
     tratto = tela.new_stroke(20, 60, 3)
@@ -546,7 +548,8 @@ def test_la_firma_opaca_viene_ritagliata_lo_stesso():
 
 
 def test_l_inchiostro_oltre_la_tela_non_viene_perso():
-    from pdfeditor.signature import render, strokes as sk
+    from pdfeditor.signature import render
+    from pdfeditor.signature import strokes as sk
 
     tela = sk.SignatureCanvas(width=200.0, height=100.0)
     tratto = tela.new_stroke(-60, 50, 3)
@@ -678,6 +681,7 @@ def test_la_firma_digitata_mette_maiuscole_e_minuscole_sulla_stessa_base():
 
 def test_l_inclinazione_non_taglia_le_lettere_larghe():
     import numpy as np
+
     from pdfeditor.signature import typed
 
     diritto = typed.render_typed(
@@ -735,4 +739,3 @@ def test_ocr_non_modifica_il_documento_se_non_riconosce_nulla(monkeypatch):
     assert not doc.dirty, "un OCR senza risultati non deve sporcare il documento"
 
 
-import numpy as np  # noqa: E402  (usato dai test sopra)

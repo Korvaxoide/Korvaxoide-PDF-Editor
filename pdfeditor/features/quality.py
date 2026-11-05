@@ -242,12 +242,12 @@ def accessibility_report(docmod: Any) -> list[Finding]:
     # link vuoti o malformati
     link_vuoti: list[int] = []
     for i in range(docmod.page_count):
-        for l in doc[i].get_links() or ():
+        for link in doc[i].get_links() or ():
             # una destinazione interna vale solo se la pagina esiste davvero:
             # un indice fuori intervallo non porta da nessuna parte
-            interno = l.get("page")
+            interno = link.get("page")
             valido_interno = isinstance(legittimo := interno, int) and 0 <= legittimo < docmod.page_count
-            if not l.get("uri") and not valido_interno and not l.get("to"):
+            if not link.get("uri") and not valido_interno and not link.get("to"):
                 link_vuoti.append(i)
     if link_vuoti:
         esito.append(

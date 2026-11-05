@@ -8,7 +8,7 @@ dalla risoluzione.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import (
@@ -17,29 +17,22 @@ from PySide6.QtGui import (
     QFont,
     QImage,
     QPainter,
-    QPainterPath,
     QPen,
     QPixmap,
     QPolygonF,
 )
 from PySide6.QtWidgets import (
-    QCheckBox,
-    QHBoxLayout,
-    QComboBox,
     QGraphicsItem,
     QGraphicsObject,
     QGraphicsRectItem,
-    QGraphicsScene,
-    QGraphicsView,
-    QLineEdit,
-    QPlainTextEdit,
-    QPushButton,
     QStyleOptionGraphicsItem,
     QWidget,
 )
 
-from ..core import document as docmod
 from ..ui import theme
+
+if TYPE_CHECKING:
+    from .page_view import PdfView
 
 HANDLE = 8
 HANDLE_HIT = 11

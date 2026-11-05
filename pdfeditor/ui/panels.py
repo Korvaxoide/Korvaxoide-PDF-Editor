@@ -6,8 +6,8 @@ import datetime as _dt
 from typing import Any
 
 import pymupdf
-from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QFont
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -20,13 +20,11 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QPlainTextEdit,
     QPushButton,
     QSpinBox,
-    QSplitter,
-    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -35,10 +33,9 @@ from PySide6.QtWidgets import (
 
 from ..core import document as docmod
 from ..core import i18n
-from ..core import units
 from ..core.i18n import tr
 from ..features import quality
-from . import icons, theme
+from . import theme
 
 # Le etichette dei tipi di campo sono funzioni e non dizionari di modulo:
 # in un dizionario la lingua resterebbe quella del primo import, che non è
@@ -868,7 +865,7 @@ class PropertiesPanel(QWidget):
         root.setSpacing(6)
         self.edits: dict[str, QLineEdit] = {}
         form = QFormLayout()
-        for key, label in zip(self.FIELDS, _etichette_metadati()):
+        for key, label in zip(self.FIELDS, _etichette_metadati(), strict=False):
             e = QLineEdit()
             e.editingFinished.connect(self._emit)
             self.edits[key] = e
@@ -904,7 +901,6 @@ class PropertiesPanel(QWidget):
         for key in self.FIELDS:
             self.edits[key].setText(str(meta.get(key) or ""))
         try:
-            from pathlib import Path
 
             size = doc.path.stat().st_size if doc.path else 0
         except Exception:

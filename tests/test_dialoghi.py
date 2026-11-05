@@ -6,7 +6,6 @@ visitano tutte le schede, si cliccano i pulsanti e si controlla che le sue
 dimensioni e il suo contenuto minimo entrino nello schermo.
 """
 
-import pymupdf
 import pytest
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFont
@@ -83,7 +82,6 @@ def _con_piu_immagini(finestra):
     contenuto dentro.
     """
     import ambiente
-
     from PIL import Image
 
     scelte = []
