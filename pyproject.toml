@@ -1,0 +1,20 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B", "I"]
+# E501 fuori: le righe lunghe sono già poche e non vale un diff enorme
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+# Si parte dai moduli di `core/` che non dipendono da PyMuPDF: gli altri
+# ereditano i limiti dei suoi stub e vanno allargati nei task successivi.
+files = [
+    "pdfeditor/core/geometry.py",
+    "pdfeditor/core/history.py",
+    "pdfeditor/core/settings.py",
+]
+ignore_missing_imports = true
+warn_unused_ignores = true
