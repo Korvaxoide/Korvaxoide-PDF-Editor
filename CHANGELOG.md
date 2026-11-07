@@ -14,6 +14,8 @@ the *About* window all read it from there.
 
 ## Unreleased
 
+## 0.1.3 — 2026-11-07
+
 ### Fixed
 
 - **The English catalogue is now included in the packaged binaries.**
