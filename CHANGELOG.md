@@ -43,6 +43,16 @@ the *About* window all read it from there.
   file. Logs stay on the machine, are never sent anywhere, and contain no
   document contents, field values, passwords or signature paths.
 
+### Changed
+
+- **Typing in a form field no longer rewrites the whole PDF on every
+  keystroke.** Each character used to serialise the entire document twice for
+  the undo history; now the value is collected for 300 ms and written once,
+  and consecutive edits to the same field collapse into a single undo step.
+  The pending value is written when the field changes, on Enter, before saving
+  and on closing, so only a crash or a forced kill within those 300 ms can lose
+  the last characters.
+
 ## 0.1.2 — 2026-11-04
 
 ### Security

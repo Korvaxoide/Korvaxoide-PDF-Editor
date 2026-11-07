@@ -13,7 +13,9 @@ class Command:
     """
 
     text: str = "Operazione"
-    merge_key: str | None = None
+    #: Chiave di fusione: due comandi consecutivi si fondono solo se è uguale.
+    #: Non è per forza una stringa: i campi usano la tupla (pagina, xref).
+    merge_key: object | None = None
     coalescable: bool = False
 
     def redo(self) -> None:

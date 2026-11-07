@@ -140,6 +140,10 @@ def test_compilazione_campo_testo(app, documento: Document):
     pump()
     assert v._editor is not None
     v._editor_commit("Luigi Verdi")
+    # il valore resta in sospeso finché il timer non scade o non si chiede
+    # esplicitamente la scrittura
+    assert not ricevuti
+    v.flush_field_commit()
     assert ricevuti and ricevuti[0][2] == "Luigi Verdi"
     v.hide_field_editor()
     assert v._editor is None

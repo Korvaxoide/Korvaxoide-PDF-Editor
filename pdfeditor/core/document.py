@@ -329,13 +329,22 @@ class FieldInfo:
 class SnapshotCommand(Command):
     """Annullamento basato su due copie complete del documento."""
 
+    coalescable = True
     byte_cost = 0
 
-    def __init__(self, doc: "Document", text: str, before: bytes, after: bytes) -> None:
+    def __init__(
+        self,
+        doc: "Document",
+        text: str,
+        before: bytes,
+        after: bytes,
+        merge_key: object | None = None,
+    ) -> None:
         self.doc = doc
         self.text = text
         self._before = before
         self._after = after
+        self.merge_key = merge_key
         self.byte_cost = len(before) + len(after)
 
     def redo(self) -> None:
@@ -343,6 +352,19 @@ class SnapshotCommand(Command):
 
     def undo(self) -> None:
         self.doc._restore(self._before)
+
+    def merge(self, other: "Command") -> bool:
+        """Assorbe la copia successiva dello stesso campo.
+
+        Senza chiave non si fonde nulla: due modifiche diverse vicine nel tempo
+        devono restare due passi di annullamento distinti.
+        """
+        if self.merge_key is None or self.merge_key != other.merge_key:
+            return False
+        self._after = other._after  # type: ignore[attr-defined]
+        self.text = other.text
+        self.byte_cost = len(self._before) + len(self._after)
+        return True
 
     def drop(self) -> None:
         self._before = b""
@@ -864,11 +886,14 @@ class Document:
         text: str,
         fn: Callable[[], Any],
         emit_pages: bool = False,
+        merge_key: object | None = None,
     ) -> Any:
         """Applica una modifica registrandola per l'annullamento.
 
         Se l'operazione solleva un'eccezione il documento viene riportato allo
         stato precedente, così un'operazione fallita non lascia mezze modifiche.
+        ``merge_key`` fonde questa modifica con quella precedente quando la
+        chiave coincide: la digitazione in un campo diventa un solo passo.
         """
         before = self.snapshot() if self._undo_enabled else b""
         try:
@@ -879,7 +904,7 @@ class Document:
             raise
         if before and self._undo_enabled:
             after = self.snapshot()
-            self.history.run(SnapshotCommand(self, text, before, after))
+            self.history.run(SnapshotCommand(self, text, before, after, merge_key))
             self.history.trim(UNDO_BUDGET)
         self.mark_dirty()
         # ogni modifica puo' cambiare il testo: le cache vanno svuotate,
@@ -2883,7 +2908,15 @@ class Document:
             # verrebbe distrutto a ogni tasto premuto e la digitazione
             # andrebbe perduta. Basta invalidare le cache: chi chiama si
             # occupa di ridisegnare la pagina.
-            self._mutate("Compila campo", _op, emit_pages=False)
+            self._mutate(
+                "Compila campo",
+                _op,
+                emit_pages=False,
+                # La stessa casella, digitando, è un solo passo di undo: la
+                # chiave distingue i campi e impedisce che due modifiche vicine
+                # su campi diversi finiscano fuse insieme.
+                merge_key=("campo", page_index, xref),
+            )
         except DocumentError:
             return False
         self.events.emit("field", page_index, xref)
