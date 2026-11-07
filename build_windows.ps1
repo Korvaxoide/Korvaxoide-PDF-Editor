@@ -85,7 +85,7 @@ $venvPython = "venv\Scripts\python.exe"
 if (Test-Path $venvPython) {
     $venvVersione = Get-VersionePython -Eseguibile $venvPython
     if ($null -eq $venvVersione -or $venvVersione -ne $python.Versione) {
-        Write-Host "    La cartella venv esistente usa Python $venvVersione: la ricreo con $($python.Versione)" -ForegroundColor Yellow
+        Write-Host "    La cartella venv esistente usa Python ${venvVersione}: la ricreo con $($python.Versione)" -ForegroundColor Yellow
         Remove-Item -Recurse -Force venv
     }
 }
