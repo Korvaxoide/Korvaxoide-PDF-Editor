@@ -14,6 +14,8 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ## Non pubblicato
 
+## 0.1.3 — 2026-11-07
+
 ### Corretto
 
 - **Il catalogo inglese ora è incluso nei binari.** `KorvaxoidePDF.spec`
