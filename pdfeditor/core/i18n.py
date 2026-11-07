@@ -228,6 +228,18 @@ def tr(testo: str) -> str:
     return _catalogo.get(testo, testo)
 
 
+def voci_catalogo() -> int:
+    """Quante voci ha il catalogo della lingua in uso.
+
+    Zero per l'italiano, che e' la lingua del sorgente. Serve al log d'avvio:
+    senza questa riga una lingua scelta ma non applicata — per esempio un
+    catalogo che nei binari finisce nella cartella sbagliata — non lascia
+    traccia, e sembra che il cambio lingua non funzioni senza dirne il motivo.
+    """
+    _catalogo_pronto()
+    return len(_catalogo)
+
+
 def esiste(testo: str) -> bool:
     """Il testo è una chiave del catalogo della lingua in uso.
 

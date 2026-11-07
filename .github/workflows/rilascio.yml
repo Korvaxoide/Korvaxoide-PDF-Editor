@@ -94,6 +94,26 @@ jobs:
           ./build_linux.sh
           test -f "dist/KorvaxoidePDF-${{ needs.versione.outputs.versione }}-x86_64.AppImage"
 
+      - name: Controlla il catalogo dentro la AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          set -euo pipefail
+          # Il catalogo deve essere un file nella cartella che i18n legge. Nella
+          # 0.1.3 era finito in resources/lang/en.json/en.json: il programma
+          # trovava una cartella al posto del file e restava in italiano.
+          ./dist/*.AppImage --appimage-extract >/dev/null
+          test -f squashfs-root/usr/bin/_internal/resources/lang/en.json
+          export XDG_CONFIG_HOME="$PWD/.prova-config"
+          export XDG_DATA_HOME="$PWD/.prova-data"
+          mkdir -p "$XDG_CONFIG_HOME/korvaxoide-pdf-editor"
+          printf '{"ui_language": "en"}\n' > "$XDG_CONFIG_HOME/korvaxoide-pdf-editor/settings.json"
+          # 40 secondi: l'AppImage da 140 MB viene estratta a ogni avvio, e su
+          # un runner lento 15 non bastavano ad arrivare al log.
+          QT_QPA_PLATFORM=offscreen timeout 40 ./dist/*.AppImage >/dev/null 2>&1 || test $? -eq 124
+          grep -Eq "Lingua dell'interfaccia: en \([1-9][0-9]* voci di catalogo\)" \
+            "$XDG_DATA_HOME/korvaxoide-pdf-editor/logs/korvaxoide.log"
+
       - uses: actions/upload-artifact@v4
         with:
           name: linux-appimage
