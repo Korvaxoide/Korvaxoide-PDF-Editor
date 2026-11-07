@@ -14,6 +14,27 @@ the *About* window all read it from there.
 
 ## Unreleased
 
+## 0.1.4 — 2026-11-07
+
+### Fixed
+
+- **Choosing *English* now really switches the interface, also in the
+  packaged binaries.** In `datas` the second element is a *directory*:
+  PyInstaller copies the source inside it. `KorvaxoidePDF.spec` passed
+  `resources/lang/en.json` as the destination, so the AppImage and the `.exe`
+  contained `resources/lang/en.json/en.json`. `i18n` looked for a file, found
+  a directory and silently stayed Italian. The list is now built by
+  `tools/risorse.py`, and the tests call that function to rebuild the packaged
+  tree and check that `resources/lang/en.json` ends up where the program looks
+  for it; the same check runs on the AppImage in the release workflow.
+
+### Added
+
+- **The startup log says which interface language was loaded** and how many
+  catalogue entries it has: a catalogue that is missing or ends up in the
+  wrong place now leaves a trace in the log instead of looking like a command
+  that ignores you.
+
 ## 0.1.3 — 2026-11-07
 
 ### Fixed

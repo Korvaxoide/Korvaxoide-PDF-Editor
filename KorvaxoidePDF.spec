@@ -97,17 +97,17 @@ QT_EXCLUDED = [
 
 hidden += QT_USED
 
-datas: list[tuple[str, str]] = []
-binaries: list[tuple[str, str]] = []
+sys.path.insert(0, str(ROOT))
+# Il secondo elemento di ogni coppia di ``datas`` e' una cartella: PyInstaller
+# copia il file dentro quella, con il suo nome. Passare il nome del file come
+# destinazione crea una cartella che si chiama come il file (per esempio
+# resources/lang/en.json/en.json): il catalogo non viene trovato e nei binari
+# l'inglese resta italiano. La costruzione sta in tools/risorse.py perche' cosi'
+# il test puo' verificarla senza eseguire la compilazione.
+from tools.risorse import dati_risorse  # noqa: E402
 
-for cartella, destinazione in (("resources/icons", "resources/icons"),
-                               ("resources/fonts", "resources/fonts"),
-                               ("resources/lang", "resources/lang")):
-    src = ROOT / cartella
-    if src.is_dir():
-        for f in src.iterdir():
-            if f.is_file():
-                datas.append((str(f), f"{destinazione}/{f.name}"))
+datas: list[tuple[str, str]] = dati_risorse(ROOT)
+binaries: list[tuple[str, str]] = []
 
 # Le traduzioni Qt sono gia' incluse dall'hook di PyInstaller: qui vengono solo
 # mantenute le italiane (potatura, in fondo).

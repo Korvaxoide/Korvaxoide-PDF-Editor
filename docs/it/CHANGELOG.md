@@ -14,6 +14,28 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
 
 ## Non pubblicato
 
+## 0.1.4 — 2026-11-07
+
+### Corretto
+
+- **Scegliere «English» ora cambia davvero l'interfaccia, anche nei binari
+  pacchettizzati.** In `datas` il secondo elemento è una *cartella*:
+  PyInstaller ci copia dentro il sorgente. `KorvaxoidePDF.spec` passava
+  `resources/lang/en.json` come destinazione, quindi AppImage ed `.exe`
+  contenevano `resources/lang/en.json/en.json`. `i18n` cercava un file,
+  trovava una cartella e restava in italiano senza dire niente. Ora l'elenco
+  lo costruisce `tools/risorse.py`, e i test chiamano quella funzione per
+  ricostruire la cartella pacchettizzata e verificare che
+  `resources/lang/en.json` finisca dove il programma lo cerca; lo stesso
+  controllo gira sull'AppImage nel workflow di rilascio.
+
+### Aggiunto
+
+- **Il log d'avvio dice quale lingua dell'interfaccia è stata caricata** e
+  quante voci ha il catalogo: un catalogo assente o finito nel posto sbagliato
+  lascia ora una traccia nel log invece di sembrare un comando che non
+  risponde.
+
 ## 0.1.3 — 2026-11-07
 
 ### Corretto

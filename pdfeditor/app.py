@@ -144,6 +144,7 @@ def run(argv: list[str] | None = None) -> int:
     i18n.set_lingua_di_sistema(QLocale.system().name())
     lingua = i18n.inizializza(str(st.get("ui_language") or ""))
     _install_translator(app, lingua)
+    log.info("Lingua dell'interfaccia: %s (%d voci di catalogo)", lingua, i18n.voci_catalogo())
 
     app.setApplicationName(__app_name__)
     app.setApplicationVersion(__version__)
