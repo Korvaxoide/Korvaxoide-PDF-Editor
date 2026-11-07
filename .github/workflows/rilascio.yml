@@ -166,7 +166,7 @@ jobs:
           set -euo pipefail
           cd dist
           ls -l
-          sha256sum ./*.AppImage ./*.exe > SHA256SUMS
+          sha256sum *.AppImage *.exe > SHA256SUMS
           cat SHA256SUMS
 
       - name: Prepara le note dal CHANGELOG
@@ -195,7 +195,7 @@ jobs:
           righe = ["", "## Download", "", "| File | sha256 |", "| --- | --- |"]
           for riga in pathlib.Path("dist/SHA256SUMS").read_text(encoding="utf-8").splitlines():
               digest, nome = riga.split(None, 1)
-              righe.append(f"| `{nome.strip()}` | `{digest}` |")
+              righe.append(f"| `{nome.strip().removeprefix('./')}` | `{digest}` |")
           note = blocco.group(1).strip() + "\n" + "\n".join(righe) + "\n"
           pathlib.Path("note.md").write_text(note, encoding="utf-8")
           EOF
