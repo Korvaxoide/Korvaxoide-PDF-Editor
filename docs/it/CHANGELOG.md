@@ -44,6 +44,16 @@ versione del pacchetto macOS e la finestra *Informazioni sul programma*.
   parte e non contengono contenuti dei documenti, valori dei campi, password o
   percorsi delle firme.
 
+### Cambiato
+
+- **Digitare in un campo non riscrive più l'intero PDF a ogni tasto.** Ogni
+  carattere serializzava due volte il documento intero per la cronologia; ora
+  il valore viene raccolto per 300 ms e scritto una volta sola, e le modifiche
+  consecutive allo stesso campo diventano un unico passo di annullamento. Il
+  valore in sospeso viene scritto al cambio di campo, con Invio, prima del
+  salvataggio e alla chiusura, quindi solo un crash o un'interruzione forzata
+  entro quei 300 ms può perdere gli ultimi caratteri.
+
 ## 0.1.2 — 2026-11-04
 
 ### Sicurezza

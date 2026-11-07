@@ -729,6 +729,9 @@ class MainWindow(QMainWindow):
             self.load_path(path)
 
     def load_path(self, path: str, password: str = "") -> bool:
+        # Il valore in sospeso appartiene al documento che si sta lasciando:
+        # va scritto ora, non dopo che `doc.open` ha sostituito il file.
+        self.view.flush_field_commit()
         # L'utente ha detto quale file vuole: il documento recuperato non gliela
         # fa vedere al suo posto, ne' adesso ne' piu' tardi. Va deciso qui, prima
         # di `_busy_start`, che svuota la coda degli eventi e lascerebbe passare
@@ -774,6 +777,9 @@ class MainWindow(QMainWindow):
     def file_save(self) -> None:
         if not self.doc.is_open:
             return
+        # L'ultimo carattere digitato può essere ancora nel timer: il file
+        # salvato deve contenerlo, non quello di 300 ms prima.
+        self.view.flush_field_commit()
         if not self.doc.path:
             self.file_save_as()
             return
@@ -805,6 +811,7 @@ class MainWindow(QMainWindow):
     def file_save_as(self) -> None:
         if not self.doc.is_open:
             return
+        self.view.flush_field_commit()
         path, _ = QFileDialog.getSaveFileName(self, "Salva come", self._start_dir(), pdf_filter())
         if not path:
             return
@@ -874,6 +881,7 @@ class MainWindow(QMainWindow):
     def file_save_copy(self) -> None:
         if not self.doc.is_open:
             return
+        self.view.flush_field_commit()
         path, _ = QFileDialog.getSaveFileName(self, "Salva una copia", self._start_dir(), pdf_filter())
         if not path:
             return
@@ -890,6 +898,7 @@ class MainWindow(QMainWindow):
         self._busy_end(f"Copia salvata: {Path(path).name}")
 
     def _save_to(self, path: str) -> None:
+        self.view.flush_field_commit()
         self._busy_start("Salvataggio…")
         try:
             self.doc.save(path)
@@ -931,6 +940,11 @@ class MainWindow(QMainWindow):
         self._rebuild_recent(self.menuBar().actions()[0].menu())
 
     def _maybe_save(self) -> bool:
+        # Prima di decidere se ci sono modifiche non salvate, l'ultimo valore
+        # digitato deve essere entrato nel documento: altrimenti una chiusura
+        # entro i 300 ms del timer lo perderebbe senza chiedere nulla.
+        if self.doc.is_open:
+            self.view.flush_field_commit()
         if not self.doc.dirty or not self.doc.is_open:
             return True
         r = QMessageBox.question(

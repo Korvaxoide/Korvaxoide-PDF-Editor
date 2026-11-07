@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from pdfeditor.ui.main_window import MainWindow
+from pdfeditor.ui.page_view import PdfView
 
 # ----------------------------------------------------------------- strumenti
 
@@ -56,6 +57,18 @@ class Utente:
     def attendi(self, cicli: int = 6) -> None:
         for _ in range(cicli):
             self.app.processEvents()
+
+    def attendi_scrittura(self) -> None:
+        """Attende che il timer che scrive il campo nel PDF sia scattato.
+
+        ``PdfView`` raccoglie il testo digitato e lo consegna dopo
+        ``COMMIT_DELAY_MS``: senza questa attesa il documento contiene ancora
+        il valore precedente e il test fallisce per un motivo che non c'entra
+        con quello che vuole verificare.
+        """
+        self.attendi()
+        QTest.qWait(PdfView.COMMIT_DELAY_MS + 50)
+        self.attendi()
 
     def barra(self) -> QToolBar:
         for b in self.w.findChildren(QToolBar):
@@ -245,7 +258,7 @@ def test_digitazione_completa_va_a_buon_fine(utente: Utente):
     editor = utente.w.view._editor
     assert editor is not None
     QTest.keyClicks(editor, "Mario Rossi")
-    utente.attendi()
+    utente.attendi_scrittura()
     valore = next(c.value for c in utente.w.doc.fields() if c.xref == f.xref)
     assert valore == "Mario Rossi", f"nel documento c'è {valore!r}"
 
@@ -257,7 +270,7 @@ def test_digitazione_in_tutti_i_campi(utente: Utente):
         editor = utente.w.view._editor
         assert editor is not None, f"l'editor di {nome} non si è aperto"
         QTest.keyClicks(editor, testo)
-        utente.attendi()
+        utente.attendi_scrittura()
         valore = next(c.value for c in utente.w.doc.fields() if c.xref == f.xref)
         assert valore == testo, f"{nome}: nel documento c'è {valore!r}"
 
@@ -283,12 +296,12 @@ def test_editor_riapre_dopo_una_richiesta_di_pagine(utente: Utente):
     f = utente.campo("nome")
     utente.clic_pagina(f.page, f.rect.x0 + 30, (f.rect.y0 + f.rect.y1) / 2)
     QTest.keyClicks(utente.w.view._editor, "Prova")
-    utente.attendi()
+    utente.attendi_scrittura()
     utente.w._on_pages_changed()
     utente.attendi()
     assert utente.w.view._editor is not None, "l'editor è stato distrutto"
     QTest.keyClicks(utente.w.view._editor, " lunga")
-    utente.attendi()
+    utente.attendi_scrittura()
     valore = next(c.value for c in utente.w.doc.fields() if c.xref == f.xref)
     assert valore == "Prova lunga", f"nel documento c'è {valore!r}"
 

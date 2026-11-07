@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, Qt, Signal
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (
     QCursor,
     QGuiApplication,
@@ -266,6 +266,11 @@ class PdfView(QGraphicsView):
     #: numero di parole selezionate con il mouse (0 se nessuna)
     text_selected = Signal(int)
 
+    #: Attesa prima di scrivere nel PDF il testo digitato. Ogni scrittura
+    #: serializza il documento intero per la cronologia: a ogni tasto era
+    #: troppo, e 300 ms sono il compromesso fra reattività e costo.
+    COMMIT_DELAY_MS = 300
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.doc: docmod.Document | None = None
@@ -277,6 +282,11 @@ class PdfView(QGraphicsView):
         self.field_states: dict[tuple[int, int], dict[str, Any]] = {}
         self.active_field: tuple[int, int] | None = None
         self._editor: QWidget | None = None
+        self._pending_commit: tuple[int, int, Any] | None = None
+        self._commit_timer = QTimer(self)
+        self._commit_timer.setSingleShot(True)
+        self._commit_timer.setInterval(self.COMMIT_DELAY_MS)
+        self._commit_timer.timeout.connect(self.flush_field_commit)
         self._sel_page: int = -1
         self._sel_rect: geo.Rect | None = None
         self._sel_xref: int | None = None
@@ -316,6 +326,11 @@ class PdfView(QGraphicsView):
     # ------------------------------------------------------------------ stato
 
     def set_document(self, doc: docmod.Document | None) -> None:
+        # Un editor aperto e un valore in sospeso appartengono al documento
+        # precedente: scriverli dopo il cambio finirebbero nel file sbagliato.
+        self._commit_timer.stop()
+        self._pending_commit = None
+        self._distruggi_editor()
         self.doc = doc
         # La selezione apparteneva al documento precedente: lasciarla indietro
         # faceva fallire Ctrl+C e «Elimina» con «Indice pagina non valido»
@@ -603,6 +618,9 @@ class PdfView(QGraphicsView):
                 w.setMaxLength(info.maxlen)
             w.setText(str(state.get("value") or ""))
             w.textChanged.connect(lambda t: self._editor_commit(t))
+            # Perdere il fuoco o premere Invio è una fine esplicita: il
+            # valore non deve aspettare il timer.
+            w.editingFinished.connect(self.flush_field_commit)
             self._editor = w
         if self._editor is None:
             return
@@ -625,13 +643,34 @@ class PdfView(QGraphicsView):
         )
 
     def _editor_commit(self, value: Any) -> None:
+        """Raccoglie il valore digitato e rimanda la scrittura al PDF.
+
+        Scrivere a ogni ``textChanged`` serializzava due volte l'intero
+        documento per ogni carattere: qui si tiene solo l'ultimo valore e il
+        timer lo consegna quando la digitazione si ferma.
+        """
         if self.active_field is None or self.doc is None:
             return
         page, xref = self.active_field
         state = self.field_states.get((page, xref))
         if state is not None:
             state["value"] = value
-        self.commit_field(page, xref, value)
+        self._pending_commit = (page, xref, value)
+        self._commit_timer.start()
+
+    def flush_field_commit(self) -> None:
+        """Scrive subito il valore in sospeso, se c'è.
+
+        Va chiamata prima di ogni operazione che legge il documento (salvataggio,
+        chiusura) e quando l'editor perde il fuoco o si cambia campo: il timer da
+        solo rimanderebbe la scrittura oltre il momento in cui serve.
+        """
+        self._commit_timer.stop()
+        pending = self._pending_commit
+        self._pending_commit = None
+        if pending is None or self.doc is None:
+            return
+        self.commit_field(*pending)
 
     def _sync_editor_value(self, value: Any) -> None:
         w = self._editor
@@ -665,18 +704,20 @@ class PdfView(QGraphicsView):
             w.removeEventFilter(self)
             w.setParent(None)
             w.deleteLater()
+        self._commit_timer.stop()
+        self._pending_commit = None
         self.active_field = None
 
     def hide_field_editor(self) -> None:
-        """Chiude l'editor del campo attivo.
+        """Chiude l'editor del campo attivo, scrivendo il valore in sospeso.
 
-        Il valore non va salvato qui: l'editor del campo invia ogni modifica
-        appena digitata, quindi chiuderlo perde solo la selezione del testo.
-        Per questo non accetta un parametro «commit», che sarebbe stato
-        ignorato.
+        Chiudere l'editor è un gesto esplicito (click fuori, Invio, Tab, cambio
+        di campo): il timer non deve rimandare la scrittura oltre quel momento,
+        altrimenti l'ultimo carattere andrebbe perso.
         """
         if self._editor is None and self.active_field is None:
             return
+        self.flush_field_commit()
         self._distruggi_editor()
         if self.doc is not None:
             self.refresh_field_states()
